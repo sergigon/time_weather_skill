@@ -19,7 +19,7 @@ from astral import Astral
 from std_msgs.msg import String
 
 pkg_name = 'timeClass'
-city_name_def = 'Madrid' # Ciudad por defecto
+city_name_def = 'Paris' # Ciudad por defecto
 
 class Time():
 
