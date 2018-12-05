@@ -3,7 +3,7 @@ string command
 ---
 #result definition
 int32 result
-pacmod_msgs/KeyValuePair[] result_info
+common_msgs/KeyValuePair result_info
 ---
 #feedback definition
 int32 feedback

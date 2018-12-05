@@ -13,8 +13,11 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   actionlib
   actionlib_msgs
+  common_msgs
+
 )
 find_package(multimedia_msgs REQUIRED)
+#find_package(common_msgs REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -64,17 +67,18 @@ catkin_python_setup()
 # )
 
 ## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
+add_action_files(
+  FILES
+  TimeWeather.action
+)
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  common_msgs
+  std_msgs
+  actionlib_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -108,8 +112,8 @@ catkin_python_setup()
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES time_weather_skill
-  CATKIN_DEPENDS roscpp rospy std_msgs roslib actionlib_msgs
-  DEPENDS multimedia_msgs
+  CATKIN_DEPENDS roscpp rospy std_msgs roslib actionlib_msgs 
+  DEPENDS multimedia_msgs common_msgs
 )
 
 ###########

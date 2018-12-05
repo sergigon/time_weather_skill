@@ -22,6 +22,8 @@ import actionlib
 # Messages
 from std_msgs.msg import String, Empty
 import multimedia_msgs.msg
+import time_weather_skill.msg
+
 
 # Skill variables
 # Package name
@@ -129,7 +131,7 @@ class TimeWeatherSkill(Skill):
 
         # default values (In progress)
         self._result.result = -1
-        self._result.result_info = ""
+        self._result.result_info = None
         self._feedback.feedback = 0
 
         ############### Si la skill esta activa: ###################

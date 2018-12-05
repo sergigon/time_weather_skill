@@ -64,6 +64,7 @@
   <depend>actionlib_msgs</depend>
 
   <depend>multimedia_msgs</depend>
+  <depend>common_msgs</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
