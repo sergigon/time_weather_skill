@@ -18,8 +18,8 @@ from astral import Astral
 
 from std_msgs.msg import String
 
-pkg_name = 'timeClass'
-city_name_def = 'Paris' # Ciudad por defecto
+pkg_name = 'time_weather_skill'
+city_name_def = 'Madrid' # Ciudad por defecto
 
 class Time():
 
@@ -79,15 +79,22 @@ class Time():
 
         # Update city if specified
         if (city!=""): # If empty, means not to update
-        	self.__update_city(city)
+            self.__update_city(city)
+            print("city updated: " + self.__city_name)
 
         # Check time
-        sun = self.__city.sun(date=datetime.date.today(), local=True)
+        sun = self.__city.sun(date=datetime.date.today(), local=False)
 
         if sun['dawn'].replace(tzinfo=None) < datetime.datetime.now() < sun['dusk'].replace(tzinfo=None):
             self.__state = 'day'
         else:
             self.__state = 'night'
+
+    def _get_state(self):
+        """
+        Return state
+        """
+        return self.__state
 
 
     def _publish_time_state(self):
