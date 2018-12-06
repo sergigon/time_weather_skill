@@ -18,6 +18,7 @@ import rospy
 import roslib
 import importlib
 import actionlib
+#import pdb; pdb.set_trace()
 
 # Messages
 from std_msgs.msg import String, Empty
@@ -119,15 +120,13 @@ class TimeWeatherSkill(Skill):
         if(len(goal_vec)>=2): # If specified, it takes the city, if not, it uses the last city used
             self._city_name = goal_vec[1] # Register time
         self._time_var._check_time(self._city_name) # Check time
-        self._result.result_info = self._time_var._get_state() + "/" + self._city_name # Result = time
-        self._result.result = 0 # Success
-
+        self._result.result = self._time_var._get_result() # Get result
+        self._result.result_info = self._time_var._get_state() + "/" + self._city_name # Result_info = time/city
 
     def execute_cb(self, goal):
         """
         Callback of the node. Activated when a goal is received
         """
-        rospy.loginfo('[' + pkg_name + ': ' + skill_name + ']')
 
         # default values (In progress)
         self._result.result = -1
@@ -216,6 +215,7 @@ if __name__ == '__main__':
     try:
         # start the node
         rospy.init_node(skill_name)
+        rospy.loginfo('[' + pkg_name + ': ' + skill_name + ']')
 
         # create and spin the node
         node = TimeWeatherSkill()

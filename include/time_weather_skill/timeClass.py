@@ -45,6 +45,7 @@ class Time():
 
         self.__astral.solar_depression = 'civil'
 
+        self.__result = 0
 
     def create_msg_srv(self):
         """
@@ -62,9 +63,17 @@ class Time():
 
     	@param city: New city.
     	"""
+        print("update_time")
+
     	self.__city_name = city
-        self.__city = self.__astral[self.__city_name]
-        self.__timezone = self.__city.timezone
+        
+        try:
+            self.__city = self.__astral[self.__city_name]
+            self.__timezone = self.__city.timezone
+            self.__result = 0 # Not errors
+        except:
+            print("City not available")
+            self.__result = -1 # Errors
 
 
     def _check_time(self, city=""):
@@ -76,25 +85,35 @@ class Time():
 
         @param city: City to calculate time. It updates self.__city.
         """
+        print("check time")
 
         # Update city if specified
         if (city!=""): # If empty, means not to update
             self.__update_city(city)
-            print("city updated: " + self.__city_name)
+            print("city updated")
 
         # Check time
-        sun = self.__city.sun(date=datetime.date.today(), local=False)
+        if(self.__result == 0):
+            sun = self.__city.sun(date=datetime.date.today(), local=False)
 
-        if sun['dawn'].replace(tzinfo=None) < datetime.datetime.now() < sun['dusk'].replace(tzinfo=None):
-            self.__state = 'day'
+            if sun['dawn'].replace(tzinfo=None) < datetime.datetime.now() < sun['dusk'].replace(tzinfo=None):
+                self.__state = 'day'
+            else:
+                self.__state = 'night'
         else:
-            self.__state = 'night'
+            self.__state = 'error'
 
     def _get_state(self):
         """
         Return state
         """
         return self.__state
+        
+    def _get_result(self):
+        """
+        Return result
+        """
+        return self.__result
 
 
     def _publish_time_state(self):

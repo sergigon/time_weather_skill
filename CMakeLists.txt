@@ -14,7 +14,9 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib
   actionlib_msgs
   common_msgs
-
+  #genmsg
+  #message_generation
+  #message_runtime
 )
 find_package(multimedia_msgs REQUIRED)
 #find_package(common_msgs REQUIRED)
