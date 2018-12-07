@@ -60,7 +60,7 @@ class TimeWeatherSkill(Skill):
         self._weather_var = Weather() # Weather object
         self._display = "000"
         self._date = "today"
-        self._info = "basic"
+        self._info_required = "basic"
 
         # init the skill
         Skill.__init__(self, skill_name, NATURAL)
@@ -115,6 +115,8 @@ class TimeWeatherSkill(Skill):
     def manage_time(self, goal_vec):
         """
         Manager of the time class. It updates the result and result_info
+
+        @param goal_vec: Vector of the goal.
         """
 
         print("Chosen time")
@@ -124,26 +126,42 @@ class TimeWeatherSkill(Skill):
         self._result.result = self._time_var._get_result() # Get result
         self._result.result_info = self._time_var._get_state() + "/" + self._city_name # Result_info = time/city
 
+    def date_text_2_int(self, text):
+        """
+        Converts the text date into int, if needed.
+
+        @param text: Text date.
+        """
+
+        if (text == 'today'):
+            return 0
+        elif (text == 'tomorrow'):
+            return 1
+        else:
+            return text
+
     def manage_weather(self, goal_vec):
         """
-        Manager of the weather class. It updates the result and result_info
+        Manager of the weather class. It updates the result and result_info.
         Examples:
         weather/Madrid/today/basic/101
         time/Madrid
+
+        @param goal_vec: Vector of the goal.
         """
 
         print("Chosen weather")
         if(len(goal_vec)>=5): # Check if all fields are completed
 
             # Check weather
-            self._city_name = goal_vec[1]
-            self._date = goal_vec[2]
-            self._info = goal_vec[3]
+            self._city_name = goal_vec[1] # City name
+            self._date = date_text_2_int(goal_vec[2]) # Date
+            self._info_required = goal_vec[3] # Info wanted
             self._weather_var._update_source('apixu') # Choose a weather source
             self._weather_var._check_weather(self._city_name, self._date, self._info) # Check weather in the specified city
 
             # Manage displays
-            self._display = goal_vec[4]
+            self._display = goal_vec[4] # Display
 
             #    self._result.result = 0 # Success
         else:

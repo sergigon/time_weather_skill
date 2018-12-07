@@ -10,6 +10,8 @@ __maintainer__ = "Sergio Gonzalez Diaz"
 __email__ = "sergigon@ing.uc3m.es"
 __status__ = "Development"
 
+import rospy
+
 import requests # URL requests
 import commands # Comandos de terminal (http://www.rafalinux.com/?p=1613)
 
@@ -32,6 +34,17 @@ class Apixu():
 
 	url_icon = 'http://www.apixu.com/doc/Apixu_weather_conditions.json' # URL para informacion de los iconos
 
+	def __init__(self):
+		"""
+        Init method.
+        """
+
+        # Class variables
+		self.__info = '' # Weather info
+		self.__city_name = ''
+		self.__result = -1
+		self.__result_info = ''
+
 	def _request(self, location=location_def, days=apixu_limit_weather, lang='es', key=api_key_serg):
 		"""
         Request method.
@@ -47,51 +60,55 @@ class Apixu():
 			'key': key,
 			'q': location,
 			'days': days, # Only for forecast
-			'lang': lang # Espanol
+			'lang': lang # Espanol by default
 		}
 
 		# Hago el URL request para el weather
-		r = requests.get(url_forecast, params = params)
-		data = r.json() # Get the data from the URL in Json format
-	'''
-	# Que tiempo hara la semana que viene
-	forecast_day = 6
-	#print(data['forecast']['forecastday'][forecast_day])
+		r = requests.get(self.url_forecast, params = params)
+		self.__data = r.json() # Get the data from the URL in Json format
 
-	print("El proximo dia " + data['forecast']['forecastday'][forecast_day]['date'] + " ")
+		# If error set something #
+		#                        #
+		##########################
 
+		print(type(self.__data))
+		#print(self.__data)
 
-	######## Showing Icon ##########
-	icon_code = '' # Codigo del icono
-	icon_number = '' # Numero de la imagen del icono
-	day = 'day' # Indica dia o noche
+	def _get_info(self, date, info_required):
+		"""
+		Get info method.
 
-	print(data['forecast']['forecastday'][forecast_day]['day']['condition']['text'])
-	print(data['forecast']['forecastday'][forecast_day]['day']['condition']['code'])
-	icon_code = data['forecast']['forecastday'][forecast_day]['day']['condition']['code'] # Guardo el codigo del icono
+		@param date: date of the forecast.
+		@param imfo_required: 
+		"""
 
-	# Pido informacion sobre los codigos y numeros de los iconos
-	i = requests.get(url_icon)
-	icons_data = i.json()
-
-	for icon in icons_data:
-		if (icon['code'] == icon_code):
-			icon_number = str(icon['icon'])
-			break
-
-	command = 'fim -a weather_icons/64x64/' + day + '/' + icon_number + '.png'
-
-	res = commands.getstatusoutput(command)
-	if res[0] == 0:
-		print res[1]
-	else:
-		print "Error: "+ str(res[0])
-		print "Descripcion: " + res[1]
-	'''
-
+		date = int(date) # Converts to intthe date for the dictionary
+		# Forecast
+		if (info_required == 'basic' or info_required == 'advanced'):
+			self.__result_info = {
+				'last_updated': self.__data['current']['last_updated'], # last updated
+				'city name': self.__data['location']['name'], # city name
+				'country_name': self.__data['location']['country'], # country name
+				'date': self.__data['forecast']['forecastday'][date]['date'], # date
+				'avg_temp_c': self.__data['forecast']['forecastday'][date]['day']['avgtemp_c'], # avgtemp_c
+				'text': self.__data['forecast']['forecastday'][date]['day']['condition']['text'], # text
+				'code': self.__data['forecast']['forecastday'][date]['day']['condition']['code'] # code
+			}
+			if (info_required == 'advanced'):
+				self.__result_info.update({
+					'mintemp_c': self.__data['forecast']['forecastday'][date]['day']['mintemp_c'], # mintemp_c
+					'maxtemp_c': self.__data['forecast']['forecastday'][date]['day']['maxtemp_c'], # maxtemp_c
+					'totalprecip_mm': self.__data['forecast']['forecastday'][date]['day']['totalprecip_mm'] # totalprecip_mm
+					})
+		print(self.__result_info)
 
 if __name__ == '__main__':
     try:
     	print("[" + pkg_name + "] __main__")
+
+    	apixu = Apixu()
+    	apixu._request('Madrid')
+    	apixu._get_info('1', 'basic')
+
     except rospy.ROSInterruptException:
         pass

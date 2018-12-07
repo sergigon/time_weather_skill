@@ -23,30 +23,20 @@ class Weather():
     Weather class.
     """
 
-    def __init__(self): # Si no se especifica, se usa ciudad por defecto
+    def __init__(self):
         """
         Init method.
-
-        @param city: City to calculate time. If not specified, it is used the city by default
         """
 
-        # class variables
+        # Class variables
         self.__city_name = ""
-        self.__result = 0 # Weather result
+        self.__result = -1 # Weather result
 
         # Weather sources
         self.__source_list = ['apixu', 'source1', 'source2'] # List of the sources
         self.__source = self.__source_list[0] # Actual source. First source by default
-        #self.__apixu = Apixu()
+        self.__apixu = Apixu()
         #self.__source1 = source1()
-
-    def __update_city(self, city):
-    	"""
-    	Update the parameters with the new city.
-
-    	@param city: New city.
-    	"""
-    	self.__city_name = city
 
     def _update_source(self, source):
         """
@@ -66,13 +56,13 @@ class Weather():
             self.__source = '' # If the source does not exists, the variable gets empty
             print('NO source called ' + source)
 
-    def _check_weather(self, city, date, info):
+    def _check_weather(self, city, date, info_required):
     	"""
         Checks the weather. Sources can be extendable.
 
         @param city: City to calculate weather. It updates self.__city.
         @param date: Date for the weather.
-        @param info: Type of info needed.
+        @param info_required: Type of info_required needed.
         """
 
         # Update city
@@ -81,7 +71,10 @@ class Weather():
         # Check weather
         if (self.__source == 'apixu'): # Apixu
             print('Chosen apixu')
-            
+            #### Make staff ####
+            self.__apixu._request(city)
+            ####################
+
         if (self.__source == 'apixu'): # Source1
             print('Chosen source1')
         if (self.__source == 'apixu'): # Source2
@@ -91,13 +84,6 @@ class Weather():
         else: # No source
             print("Weather source not exists, or bad written")
             # Update result #
-
-    def _get_info(self):
-        """
-        Return state
-        """
-        return self.__info
-
 
 if __name__ == '__main__':
     try:
