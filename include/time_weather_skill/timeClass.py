@@ -24,7 +24,7 @@ city_name_def = 'Madrid' # Ciudad por defecto
 class Time():
 
     """
-    Time skill class.
+    Time class.
     """
 
     def __init__(self, city_name=city_name_def): # Si no se especifica, se usa ciudad por defecto
@@ -63,8 +63,6 @@ class Time():
 
     	@param city: New city.
     	"""
-        print("update_time")
-
     	self.__city_name = city
         
         try:
@@ -85,22 +83,20 @@ class Time():
 
         @param city: City to calculate time. It updates self.__city.
         """
-        print("check time")
 
         # Update city if specified
         if (city!=""): # If empty, means not to update
             self.__update_city(city)
-            print("city updated")
 
         # Check time
-        if(self.__result == 0):
+        if(self.__result == 0): # Success
             sun = self.__city.sun(date=datetime.date.today(), local=False)
 
             if sun['dawn'].replace(tzinfo=None) < datetime.datetime.now() < sun['dusk'].replace(tzinfo=None):
                 self.__state = 'day'
             else:
                 self.__state = 'night'
-        else:
+        else: # Error
             self.__state = 'error'
 
     def _get_state(self):

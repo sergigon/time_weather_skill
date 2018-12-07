@@ -13,20 +13,17 @@ __status__ = "Development"
 
 import rospy
 
-from astral import Astral
-
 from std_msgs.msg import String
 
 pkg_name = 'time_weather_skill'
-city_name_def = 'Madrid' # Ciudad por defecto
 
 class Weather():
 
     """
-    Time skill class.
+    Weather class.
     """
 
-    def __init__(self, city_name=city_name_def): # Si no se especifica, se usa ciudad por defecto
+    def __init__(self): # Si no se especifica, se usa ciudad por defecto
         """
         Init method.
 
@@ -34,8 +31,14 @@ class Weather():
         """
 
         # class variables
-        self.__city_name = city_name_def
-        self.__info = "" # Weather info
+        self.__city_name = ""
+        self.__result = 0 # Weather result
+
+        # Weather sources
+        self.__source_list = ['apixu', 'source1', 'source2'] # List of the sources
+        self.__source = self.__source_list[0] # Actual source. First source by default
+        #self.__apixu = Apixu()
+        #self.__source1 = source1()
 
     def __update_city(self, city):
     	"""
@@ -45,24 +48,49 @@ class Weather():
     	"""
     	self.__city_name = city
 
+    def _update_source(self, source):
+        """
+        Update the weather source.
+        If the source exists, it updates. If not, the variable gets empty.
 
-    def _check_weather(self, city=""):
-    	"""
-        Checks if it is day or night.
-        If not specified, it uses the last city used.
-
-        Change the variable self.__state ('day' or 'night').
-
-        @param city: City to calculate time. It updates self.__city.
+        @param source: New source.
         """
 
-        # Update city if specified
-        if (city!=""): # If empty, means not to update
-            self.__update_city(city)
-            print("city updated: " + self.__city_name)
+        # Search if the source is in the list
+        for s in self.__source_list:
+            if(source == s):
+                self.__source = source # If the source exists, it updates
+                print('New source: ' + self.__source)
+                break
+        else:
+            self.__source = '' # If the source does not exists, the variable gets empty
+            print('NO source called ' + source)
+
+    def _check_weather(self, city, date, info):
+    	"""
+        Checks the weather. Sources can be extendable.
+
+        @param city: City to calculate weather. It updates self.__city.
+        @param date: Date for the weather.
+        @param info: Type of info needed.
+        """
+
+        # Update city
+        self.__update_city(city)
 
         # Check weather
+        if (self.__source == 'apixu'): # Apixu
+            print('Chosen apixu')
+            
+        if (self.__source == 'apixu'): # Source1
+            print('Chosen source1')
+        if (self.__source == 'apixu'): # Source2
+            print('Chosen source2')
 
+            # Update result #
+        else: # No source
+            print("Weather source not exists, or bad written")
+            # Update result #
 
     def _get_info(self):
         """
@@ -74,5 +102,10 @@ class Weather():
 if __name__ == '__main__':
     try:
     	print("[" + pkg_name + "] __main__")
+
+        weather = Weather() # Create object Weather
+        weather._update_source('apixu') # Choose a weather source
+        weather._check_weather('Madrid', 'today', 'basic') # Check weather in the specified city
+
     except rospy.ROSInterruptException:
         pass

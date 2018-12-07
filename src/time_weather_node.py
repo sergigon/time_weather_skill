@@ -55,9 +55,9 @@ class TimeWeatherSkill(Skill):
         ## common variables
         self._city_name = city_name_def # City to find the weather
         ## time variables
-        self._time_var = Time() # Time class
+        self._time_var = Time() # Time object
         ## weather variables
-        self._weather_var = Weather() # Weather class
+        self._weather_var = Weather() # Weather object
         self._display = "000"
         self._date = "today"
         self._info = "basic"
@@ -114,8 +114,9 @@ class TimeWeatherSkill(Skill):
 
     def manage_time(self, goal_vec):
         """
-        Manager of the time node.
+        Manager of the time class. It updates the result and result_info
         """
+
         print("Chosen time")
         if(len(goal_vec)>=2): # If specified, it takes the city, if not, it uses the last city used
             self._city_name = goal_vec[1] # Register time
@@ -123,14 +124,44 @@ class TimeWeatherSkill(Skill):
         self._result.result = self._time_var._get_result() # Get result
         self._result.result_info = self._time_var._get_state() + "/" + self._city_name # Result_info = time/city
 
+    def manage_weather(self, goal_vec):
+        """
+        Manager of the weather class. It updates the result and result_info
+        Examples:
+        weather/Madrid/today/basic/101
+        time/Madrid
+        """
+
+        print("Chosen weather")
+        if(len(goal_vec)>=5): # Check if all fields are completed
+
+            # Check weather
+            self._city_name = goal_vec[1]
+            self._date = goal_vec[2]
+            self._info = goal_vec[3]
+            self._weather_var._update_source('apixu') # Choose a weather source
+            self._weather_var._check_weather(self._city_name, self._date, self._info) # Check weather in the specified city
+
+            # Manage displays
+            self._display = goal_vec[4]
+
+            #    self._result.result = 0 # Success
+        else:
+            print("Goal size not completed")
+            self._result.result = -1 # Fail
+            self._result.result_info = 'Error'
+
+        #     self._result.result = self._time_var._get_result() # Get result
+        #    self._result.result_info = self._time_var._get_state() + "/" + self._city_name # Result_info = time/city
+
     def execute_cb(self, goal):
         """
         Callback of the node. Activated when a goal is received
         """
 
         # default values (In progress)
-        self._result.result = -1
-        self._result.result_info = None
+        self._result.result = -1 # Error
+        self._result.result_info = None # Empty
         self._feedback.feedback = 0
 
         ############### Si la skill esta activa: ###################
@@ -138,43 +169,31 @@ class TimeWeatherSkill(Skill):
             print ("RUNNING...")
 
             try:
-                # Si el goal esta en estado Preempted (es decir, hay
-                # un goal en cola o se cancela el goal actual),
-                # activo la excepcion ##############################
+                ######### Si el goal esta en estado Preempted (es
+                # decir, hay un goal en cola o se cancela el goal
+                # actual), activo la excepcion #####################
                 if self._as.is_preempt_requested():
                     print("Preempt requested")
                     raise ActionlibException
                 #==================================================#
                 
-                ################ Proceso el goal ###################
-                goal_vec = goal.command.split("/") # Goal divided by fields
+                ################# Proceso el goal ##################
+                goal_vec = goal.command.split("/") # Divides goal by fields
 
-                if (goal_vec[0] == "time"):
-                    ############ Publish time ######################
+                # Checks goal
+                if (goal_vec[0] == "time"): # Time
+                    #################### Time ######################
                     self.manage_time(goal_vec)
                     ################################################
-                    
-                elif (goal_vec[0] == "weather"):
-                    print("Chosen weather")
-                    if(len(goal_vec)>=5): # Check if all fields are completed
-                        self._city_name = goal_vec[1]
-                        self._display = goal_vec[2]
-                        self._date = goal_vec[3]
-                        self._info = goal_vec[4]
 
-                        self._result.result = 0 # Success
-                    else:
-                        print("Goal not completed")
-                        self._result.result = -1 # Fail
-                else:
-                    print("Goal empty")
+                elif (goal_vec[0] == "weather"): # Weather
+                    ################### Weather ####################
+                    self.manage_weather(goal_vec)
+                    ################################################
+
+                else: # Bad goal
+                    print("Goal not correct")
                     self._result.result = -1 # Fail
-                i = 0
-                for z in goal_vec:
-                    i = i+1
-                    print("Command " + str(i) + ": " + z)
-                
-                
                 #==================================================#
             
             ######### Si se ha hecho un preempted o cancel: ########

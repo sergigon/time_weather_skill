@@ -1,7 +1,7 @@
 # time_weather_skill
 
 # Inputs:
-Type_of_information/city/display/day/information
+Type_of_information/city/day/information/display
 
 ## Type of information:
 + weather: Displays the weather and return info
@@ -11,10 +11,6 @@ Type_of_information/city/display/day/information
 ## City:
 If not specified, write: 'default'
 By default: Madrid (in future use gps)
-
-## Display:
-Each number corresponds to one variable:
-+ '101' (Screen, movement, voice)
 
 ## Day:
 + 'week': shows all week info
@@ -58,3 +54,7 @@ Each number corresponds to one variable:
 +++ totalprecip_mm (forecast/forecastday[i]/day/totalprecip_mm)
 +++ ...
 ##############################
+
+## Display:
+Each number corresponds to one variable:
++ '101' (Screen, movement, voice)
