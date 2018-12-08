@@ -45,9 +45,10 @@ class Apixu():
 
         # Class variables
 		self.__info = '' # Weather info
-		self.__city_name = ''
-		self.__result = -1
-		self.__result_info = {}
+		self.__city_name = '' # Name of the actual city
+		self.__result = -1 # Result
+		self.__result_info = {} # Result info
+		self.__data = '' # Reuest data in JSON format
 
 	def _request(self, location=location_def, days=apixu_limit_weather, lang='es', key=api_key_serg):
 		"""
@@ -55,8 +56,8 @@ class Apixu():
 
         @param location: City to calculate weather. Format: "Madrid" or "Madrid, Spain".
         @param days: Forecast days.
-        @param lang: Language. By default in spanish
-        @param key: Key to make the request
+        @param lang: Language. By default in spanish.
+        @param key: Key to make the request.
         """
 
 		# Parametros para hacer el URL request
@@ -69,15 +70,23 @@ class Apixu():
 
 		# Hago el URL request para el weather
 		r = requests.get(self.url_forecast, params = params)
-		self.__data = r.json() # Get the data from the URL in Json format
+		self.__data = r.json() # Get the data from the URL in JSON format
 
 		# If error set something #
 		#                        #
 		##########################
 
+	def _create_json(self, json_in):
+		"""
+		Method to create a json file.
+
+		@param json_in: json variable to make the file.
+		"""
+
 	def _update(self):
 		"""
 		Looks if there is already weather info in local.
+
 		Used to not make unnecessary requests.
 		"""
 
@@ -86,10 +95,12 @@ class Apixu():
 		Get info method.
 
 		@param date: date of the forecast.
-		@param imfo_required: 
+		@param info_required: type of info requested.
+
+		@return self.__result_info: info requested.
 		"""
 
-		# Converts to int the date for the dictionary
+		# Converts to int the date for the result_info dictionary
 		date = int(date)
 
 		# Prepare info_required list
@@ -137,6 +148,8 @@ class Apixu():
 
 		# Print of the result info
 		print(self.__result_info)
+
+		return self.__result_info
 		
 
 if __name__ == '__main__':
