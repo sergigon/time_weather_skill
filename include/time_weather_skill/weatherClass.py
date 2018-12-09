@@ -39,13 +39,6 @@ class Weather():
         self.__apixu = Apixu()
         #self.__source1 = source1()...
 
-    def _return_source(self):
-        """
-        Returns the actual weather source.
-        """
-
-        return self.__source
-
     def _update_source(self, source):
         """
         Update the weather source variable.
@@ -85,17 +78,18 @@ class Weather():
             #### Make staff ####
             self.__apixu._request(city)
             self.__apixu._get_info(date, info_required)
-            ####################
-            # Update result
+
+            # Update results
             self.__result = self.__apixu._return_result()
             self.__result_info = self.__apixu._return_info()
+            ####################
 
         elif (self.__source == 'source1'): # Source1
             print('Chosen source1')
             #### Make staff ####
 
-            ####################
             # Update result #
+            ####################
 
         else: # No source
             print("Weather source not exists, or bad written")
@@ -118,6 +112,13 @@ class Weather():
         """
 
         return self.__result_info
+
+    def _return_source(self):
+        """
+        Returns the actual weather source.
+        """
+
+        return self.__source
 
 if __name__ == '__main__':
     try:

@@ -112,7 +112,7 @@ class TimeWeatherSkill(Skill):
         self._time_var._check_time(self._city_name) # Check time
 
         self._result.result = self._time_var._return_result() # Get result
-        self._result.result_info = self._time_var._return_info() + "/" + self._city_name # Result_info = time/city
+        self._result.result_info = str(self._time_var._return_info()) # Result_info = time state
 
     def manage_weather(self, goal_vec):
         """

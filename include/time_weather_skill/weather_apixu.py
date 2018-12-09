@@ -131,7 +131,7 @@ class Apixu():
 			info_required_list = self.info_basic_list[:] # Replace the list with the basic list
 		
 		# Forecast
-		for info_required_i in info_required_list:
+		for info_required_i in info_required_list: # Fill the tne result_info variable with the info
 
 			if (info_required_i == 'last_updated'): # last updated
 				self.__result_info.update({'last_updated': self.__data['current']['last_updated']})

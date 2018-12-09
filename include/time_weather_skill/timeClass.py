@@ -27,27 +27,24 @@ class Time():
     Time class.
     """
 
-    def __init__(self, city_name=city_name_def): # Si no se especifica, se usa ciudad por defecto
+    def __init__(self): # Si no se especifica, se usa ciudad por defecto
         """
         Init method.
-
-        @param city: City to calculate time. If not specified, it is used the city by default
         """
 
-        # class variables
-        self.__previous_state = ''      
-        self.__state = ''
-        self.__astral = Astral()
+        # class variables    
+        self.__state = {} # Info
+        self.__result = -1 # Result
+        self.__city_name = ''
 
-        self.__city_name = city_name
-        self.__city = self.__astral[self.__city_name]
-        self.__timezone = self.__city.timezone
-
+        # Astral variables
+        self.__astral = Astral() # Astral object
         self.__astral.solar_depression = 'civil'
+        self.__city = None
+        self.__timezone = None
+        
 
-        self.__result = 0
-
-    def __update_city(self, city):
+    def __update_city_params(self, city):
     	"""
     	Update the parameters with the new city.
 
@@ -58,13 +55,13 @@ class Time():
         try:
             self.__city = self.__astral[self.__city_name]
             self.__timezone = self.__city.timezone
-            self.__result = 0 # Not errors
+            self.__result = 0 # Success
         except:
             print("City not available")
             self.__result = -1 # Errors
 
 
-    def _check_time(self, city=""):
+    def _check_time(self, city):
     	"""
         Checks if it is day or night.
         If not specified, it uses the last city used.
@@ -74,20 +71,22 @@ class Time():
         @param city: City to calculate time. It updates self.__city.
         """
 
-        # Update city if specified
-        if (city!=""): # If empty, means not to update
-            self.__update_city(city)
+        # Reset
+        self.__state = {}
+
+        # Update city parameters
+        self.__update_city_params(city)
 
         # Check time
-        if(self.__result == 0): # Success
+        if(self.__result == 0): # If result is success, searchs for state
             sun = self.__city.sun(date=datetime.date.today(), local=False)
 
             if sun['dawn'].replace(tzinfo=None) < datetime.datetime.now() < sun['dusk'].replace(tzinfo=None):
-                self.__state = 'day'
+                self.__state = {'state': 'day', 'city_name': self.__city_name}
             else:
-                self.__state = 'night'
+                self.__state = {'state': 'night', 'city_name': self.__city_name}
         else: # Error
-            self.__state = 'error'
+            self.__state = {'state': 'error: City not available', 'city_name': self.__city_name}
 
     def _return_info(self):
         """
