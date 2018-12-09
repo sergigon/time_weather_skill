@@ -47,16 +47,6 @@ class Time():
 
         self.__result = 0
 
-    def create_msg_srv(self):
-        """
-        This function has to be implemented in the children.
-
-        @raise rospy.ROSException: if the service is inactive.
-        """
-
-        # publishers and subscribers        
-        self.__time_pub = rospy.Publisher('time', String, latch=True, queue_size=1)
-
     def __update_city(self, city):
     	"""
     	Update the parameters with the new city.
@@ -110,23 +100,6 @@ class Time():
         Return result
         """
         return self.__result
-
-
-    def _publish_time_state(self):
-        """
-        Publish if new state received.
-        """
-
-        if self.__previous_state != self.__state:
-            # update the state
-            rospy.logdebug('[%s]: %s' % (pkg_name, self.__state))
-            print('[%s]: %s' % (pkg_name, self.__state)) 
-
-            # publish the new state
-            self.__time_pub.publish(String(self.__state))
-            self.__previous_state = self.__state
-            print(self.__city_name)
-
 
 if __name__ == '__main__':
     try:

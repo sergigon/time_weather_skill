@@ -97,21 +97,6 @@ class TimeWeatherSkill(Skill):
             
         print("shutdown_msg_srv() called")
 
-    def run(self):
-        """
-        Spinner of the node.
-        """
-
-        while not rospy.is_shutdown():
-            if self._status == self.RUNNING:
-                ############ Publish time #############
-                self._time_var._check_time(self._city_name)
-                self._time_var._publish_time_state()
-                #######################################
-
-                # sleep some seconds
-                rospy.sleep(5)
-
     def manage_time(self, goal_vec):
         """
         Manager of the time class. It updates the result and result_info
