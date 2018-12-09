@@ -13,7 +13,7 @@ __status__ = "Development"
 
 import rospy
 
-from std_msgs.msg import String
+from time_weather_skill.weather_apixu import Apixu
 
 pkg_name = 'time_weather_skill'
 
@@ -29,18 +29,27 @@ class Weather():
         """
 
         # Class variables
-        self.__city_name = ""
+        self.__city = ""
         self.__result = -1 # Weather result
+        self.__result_info = "" # Weather info
 
         # Weather sources
         self.__source_list = ['apixu', 'source1', 'source2'] # List of the sources
         self.__source = self.__source_list[0] # Actual source. First source by default
         self.__apixu = Apixu()
-        #self.__source1 = source1()
+        #self.__source1 = source1()...
+
+    def _return_source(self):
+        """
+        Returns the actual weather source.
+        """
+
+        return self.__source
 
     def _update_source(self, source):
         """
-        Update the weather source.
+        Update the weather source variable.
+
         If the source exists, it updates. If not, the variable gets empty.
 
         @param source: New source.
@@ -58,7 +67,9 @@ class Weather():
 
     def _check_weather(self, city, date, info_required):
     	"""
-        Checks the weather. Sources can be extendable.
+        Checks the weather.
+
+        It uses the source specified in self.__source. Sources can be extendable.
 
         @param city: City to calculate weather. It updates self.__city.
         @param date: Date for the weather.
@@ -66,24 +77,47 @@ class Weather():
         """
 
         # Update city
-        self.__update_city(city)
+        self.__city = city
 
         # Check weather
         if (self.__source == 'apixu'): # Apixu
             print('Chosen apixu')
             #### Make staff ####
             self.__apixu._request(city)
+            self.__apixu._get_info(date, info_required)
             ####################
+            # Update result
+            self.__result = self.__apixu._return_result()
+            self.__result_info = self.__apixu._return_info()
 
-        if (self.__source == 'apixu'): # Source1
+        elif (self.__source == 'source1'): # Source1
             print('Chosen source1')
-        if (self.__source == 'apixu'): # Source2
-            print('Chosen source2')
+            #### Make staff ####
 
+            ####################
             # Update result #
+
         else: # No source
             print("Weather source not exists, or bad written")
-            # Update result #
+            # Update result
+            self.__result = -1
+            self.__result_info = 'Weather source not exists, or bad written'
+
+        print('From weatherClass: ', self.__result_info)
+
+    def _return_result(self):
+        """
+        Return self.__result variable stored
+        """
+
+        return self.__result
+
+    def _return_info(self):
+        """
+        Return self.__result_info variable stored
+        """
+
+        return self.__result_info
 
 if __name__ == '__main__':
     try:

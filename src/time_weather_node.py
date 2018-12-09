@@ -120,25 +120,14 @@ class TimeWeatherSkill(Skill):
         """
 
         print("Chosen time")
+
         if(len(goal_vec)>=2): # If specified, it takes the city, if not, it uses the last city used
             self._city_name = goal_vec[1] # Register time
+
         self._time_var._check_time(self._city_name) # Check time
-        self._result.result = self._time_var._get_result() # Get result
-        self._result.result_info = self._time_var._get_state() + "/" + self._city_name # Result_info = time/city
 
-    def date_text_2_int(self, text):
-        """
-        Converts the text date into int, if needed.
-
-        @param text: Text date.
-        """
-
-        if (text == 'today'):
-            return 0
-        elif (text == 'tomorrow'):
-            return 1
-        else:
-            return text
+        self._result.result = self._time_var._return_result() # Get result
+        self._result.result_info = self._time_var._return_info() + "/" + self._city_name # Result_info = time/city
 
     def manage_weather(self, goal_vec):
         """
@@ -153,21 +142,31 @@ class TimeWeatherSkill(Skill):
         print("Chosen weather")
         if(len(goal_vec)>=5): # Check if all fields are completed
 
-            # Check weather
+            ############## Check weather ################
             self._city_name = goal_vec[1] # City name
-            self._date = date_text_2_int(goal_vec[2]) # Date
+            self._date = goal_vec[2] # Date
             self._info_required = goal_vec[3] # Info wanted
-            self._weather_var._update_source('apixu') # Choose a weather source
-            self._weather_var._check_weather(self._city_name, self._date, self._info) # Check weather in the specified city
 
-            # Manage displays
+            self._weather_var._update_source('apixu') # Choose a weather source
+            self._weather_var._check_weather(self._city_name, self._date, self._info_required) # Check weather in the specified city
+
+            self._result.result = self._weather_var._return_result() # Get result
+            self._result.result_info = str(self._weather_var._return_info()) # Result_info = weather info
+            #############################################
+
+            ############# Manage displays ###############
             self._display = goal_vec[4] # Display
 
+            #############################################
             #    self._result.result = 0 # Success
+
         else:
             print("Goal size not completed")
             self._result.result = -1 # Fail
             self._result.result_info = 'Error'
+
+        print('result: ', self._result.result)
+        print('info: ', self._result.result_info)
 
         #     self._result.result = self._time_var._get_result() # Get result
         #    self._result.result_info = self._time_var._get_state() + "/" + self._city_name # Result_info = time/city

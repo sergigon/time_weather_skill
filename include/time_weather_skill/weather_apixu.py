@@ -89,6 +89,20 @@ class Apixu():
 
 		Used to not make unnecessary requests.
 		"""
+	def _fix_date(self, date):
+		"""
+		Fix the date and converts to int.
+		"""
+
+		if (date == 'today'):
+			date = '0'
+		elif (date == 'tomorrow'):
+			date = '1'
+
+		date = int(date) # Converts to int
+
+		return date
+
 
 	def _get_info(self, date, info_required):
 		"""
@@ -100,8 +114,11 @@ class Apixu():
 		@return self.__result_info: info requested.
 		"""
 
+		# Reset result info
+		self.__result_info = {}
+
 		# Converts to int the date for the result_info dictionary
-		date = int(date)
+		date = self._fix_date(date)
 
 		# Prepare info_required list
 		info_required = info_required.replace(' ','') # Remove spaces form the string
@@ -146,19 +163,35 @@ class Apixu():
 			if (info_required_i == 'totalprecip_mm'): # totalprecip_mm
 				self.__result_info.update({'totalprecip_mm': self.__data['forecast']['forecastday'][date]['day']['totalprecip_mm']})
 
-		# Print of the result info
-		print(self.__result_info)
+		self.__result = 0
+
+		print('From weather_apixu: ', self.__result_info)
+
+		return self.__result_info
+
+	def _return_result(self):
+		"""
+		Return self.__result variable stored
+		"""
+
+		return self.__result
+
+	def _return_info(self):
+		"""
+		Return self.__result_info variable stored
+		"""
 
 		return self.__result_info
 		
 
 if __name__ == '__main__':
     try:
-    	print("[" + pkg_name + "] __main__")
+    	print("[" + pkg_name + "]: __main__")
 
     	apixu = Apixu()
     	apixu._request('Madrid')
-    	apixu._get_info('1', 'advanced, s')
+    	apixu._get_info('tomorrow', 'advanced, s')
+    	print(apixu._return_info())
 
     except rospy.ROSInterruptException:
         pass

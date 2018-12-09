@@ -99,13 +99,13 @@ class Time():
         else: # Error
             self.__state = 'error'
 
-    def _get_state(self):
+    def _return_info(self):
         """
         Return state
         """
         return self.__state
         
-    def _get_result(self):
+    def _return_result(self):
         """
         Return result
         """
@@ -130,6 +130,17 @@ class Time():
 
 if __name__ == '__main__':
     try:
-    	print("[" + pkg_name + "] __main__")
+    	print("[" + pkg_name + "]: __main__")
+
+        time_var = Time()
+        
+        time_var._check_time('Paris') # Check time
+        result = time_var._return_result() # Get result
+        info = time_var._return_info() + "/" + 'Paris' # Result_info = time/city
+
+        print(result)
+        print(info)
+        
+
     except rospy.ROSInterruptException:
         pass
