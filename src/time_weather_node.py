@@ -11,8 +11,9 @@ __email__ = "sergigon@ing.uc3m.es"
 __status__ = "Development"
 
 from skill.skill import Skill, ActionlibException, NATURAL
-from time_weather_skill.timeClass import Time
-from time_weather_skill.weatherClass import Weather
+from time_weather_skill.timeClass import Time # Time class
+from time_weather_skill.weatherClass import Weather # Weather class
+from time_weather_skill.general_functions import makeCA_info, makeCA_gesture_info # Voice communication CA functions
 
 import rospy
 import roslib
@@ -22,9 +23,11 @@ import actionlib
 
 # Messages
 from std_msgs.msg import String, Empty
+from interaction_msgs.msg import CA
 import time_weather_skill.msg
 from common_msgs.msg import KeyValuePair
 
+robot = "/alz4/"
 
 # Skill variables
 # Package name
@@ -60,9 +63,9 @@ class TimeWeatherSkill(Skill):
         self._time_var = Time() # Time object
         ## weather variables
         self._weather_var = Weather() # Weather object
-        self._display = "000"
         self._date = "today"
         self._info_required = "basic"
+        self._display = "000"
 
         # init the skill
         Skill.__init__(self, skill_name, NATURAL)
@@ -77,6 +80,10 @@ class TimeWeatherSkill(Skill):
         print("create_msg_srv() called")
 
         # publishers and subscribers
+        self.ca_pub = rospy.Publisher(robot + "hri_manager/ca_activations", CA, queue_size=10) # CA publisher
+        self.ca_deactivation_pub = rospy.Publisher(robot + "hri_manager/ca_deactivations", String, queue_size=10) # CA deactivation publisher
+
+        #self.sub_response = rospy.Subscriber(robot + "hri_manager/response", CA, self.response_callback) # CA subscriber
 
         # servers and clients
         # Si el servidor actionlib no se ha inicializado:
@@ -118,6 +125,31 @@ class TimeWeatherSkill(Skill):
         self._result.result = self._time_var._return_result() # Get result
         self._result_info_dic = self._time_var._return_info() # Result_info = time state
 
+    def manage_display(self, display):
+        ############# Manage displays ###############
+        display_vec = list(display) # Divides goal by fields
+        self._screen = display_vec[0]
+        self._movement = display_vec[1]
+        self._voice = display_vec[2]
+
+        if(self._screen == 1):
+            pass
+        if(self._movement == 1):
+            pass
+        if(self._voice == 1):
+            pass
+
+        print('makeCA_info()')
+        ca_info = makeCA_info('Hola caracola.')
+        self.ca_pub.publish(ca_info)
+        rospy.sleep(10)
+
+        print('makeCA_gesture_info')
+        ca_gesture_info = makeCA_gesture_info('alz_happy')
+        self.ca_pub.publish(ca_gesture_info)
+        #############################################
+        #    self._result.result = 0 # Success
+
     def manage_weather(self, goal_vec):
         """
         Manager of the weather class. It updates the result and result_info.
@@ -129,7 +161,7 @@ class TimeWeatherSkill(Skill):
         """
 
         print("Chosen weather")
-        if(len(goal_vec)>=5): # Check if all fields are completed
+        if(len(goal_vec)>=4): # Check if all fields are completed
 
             ############## Check weather ################
             self._city_name = goal_vec[1] # City name
@@ -145,12 +177,6 @@ class TimeWeatherSkill(Skill):
             self._result.result = self._weather_var._return_result() # Get result
             self._result_info_dic = self._weather_var._return_info() # Result_info = weather info
             #############################################
-
-            ############# Manage displays ###############
-            self._display = goal_vec[4] # Display
-
-            #############################################
-            #    self._result.result = 0 # Success
 
         else:
             print("Goal size not completed")
@@ -192,6 +218,8 @@ class TimeWeatherSkill(Skill):
                 elif (goal_vec[0] == "weather"): # Weather
                     ################### Weather ####################
                     self.manage_weather(goal_vec)
+                    if(len(goal_vec)>=5): # Check if the display field is completed
+                        self.manage_display(goal_vec[5])
                     ################################################
 
                 else: # Bad goal
@@ -258,7 +286,7 @@ if __name__ == '__main__':
 
         # create and spin the node
         node = TimeWeatherSkill()
-        #node.run()
+        node.manage_display("111")
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
