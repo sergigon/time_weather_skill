@@ -81,10 +81,10 @@ Only for forecast:
 + `'maxtemp_c'`: Maximum temperature in celsius for the day
 + `'totalprecip_mm'`: Total precipitation in milimeters
 
-+ `'basic'`: Basic info. It include the following data:
++ `'basic'`: Basic info. It includes the following data:
   + Current: `'last_updated'`, `'city_name'`, `'country_name'`, `'date'`, `'temp_c'`, `'text'`, `'code'`, `'is_day'`
   + Forecast: `'last_updated'`, `'city_name'`, `'country_name'`, `'date'`, `'avgtemp_c'`, `'text'`, `'code'`
-+ `'advanced'`: Advanced info. It include the following data:
++ `'advanced'`: Advanced info. It includes the following data:
   + Current: `Basic list`, `'precip_mm'`
   + Forecast: `Basic list`, `'mintemp_c'`, `'maxtemp_c'`, `'totalprecip_mm'`
 
