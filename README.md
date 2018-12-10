@@ -7,14 +7,15 @@ It can provide info about the state of the day (day or night), or info about the
 
 ## Time info
 It returns the state info: 'day' or 'night'.
+
 Source:
 + [Astral](https://pypi.org/project/astral/): Uses **local** data
+
 ## Weather info
 It returns weather info.
+
 Soruces:
 + [Apixu](https://www.apixu.com/): Uses **URL** data
-
-
 
 # Goal
 ## Goal structure
