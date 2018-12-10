@@ -40,11 +40,8 @@ class TimeWeatherSkill(Skill):
     """
 
     # Feedback and result of this skill
-    #_feedback = multimedia_msgs.msg.MultimediaFeedback() # getattr(multimedia_msgs.msg, server_feedback_str) #my_import(server_module_str, server_feedback_str) # (multimedia_msgs.msg.{Action_name}Feedback)
-    #_result = multimedia_msgs.msg.MultimediaResult() # getattr(multimedia_msgs.msg, server_result_str) # (multimedia_msgs.msg.{Action_name}Result)
-
-    _feedback = time_weather_skill.msg.TimeWeatherFeedback() # getattr(multimedia_msgs.msg, server_feedback_str) #my_import(server_module_str, server_feedback_str) # (multimedia_msgs.msg.{Action_name}Feedback)
-    _result = time_weather_skill.msg.TimeWeatherResult() # getattr(multimedia_msgs.msg, server_result_str) # (multimedia_msgs.msg.{Action_name}Result)
+    _feedback = time_weather_skill.msg.TimeWeatherFeedback()
+    _result = time_weather_skill.msg.TimeWeatherResult()
 
 
     def __init__(self):
