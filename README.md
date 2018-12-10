@@ -25,27 +25,27 @@ Examples:
 + `'weather/madrid/2/basic/101'`
 + `'time/paris'`
 
-## Type of information:
+## Type of information
 Type of info needed.
 Posible inputs:
 + **weather**: Displays the weather and return info
 + **time**: Return the actual state time (day or night)
 + **comment**: Return a joke
 
-## City:
+## City
 City where to check the time/weather.
 
 For **weather**, it can be specified the country.
 Example: **`'Madrid, Spain'`**
 
 Some cities may not be found.
-### Lists of available cities
-#### Time:
-+ [Astral](https://astral.readthedocs.io/en/stable/index.html#cities)
-#### Weather:
-+ Apixu: Most of the world cities
+### Lists of available cities:
++ Time
+  + [Astral](https://astral.readthedocs.io/en/stable/index.html#cities)
++ Weather
+  + Apixu: Most of the world cities
 
-## Day:
+## Day
 Forecast day.
 
 Posible inputs:
@@ -57,7 +57,7 @@ Posible inputs:
 + `'6'`
 
 
-## Information_required:
+## Information_required
 Names of the info you need. To get more than one variable, specify it with separating by commas.
 
 Example: **`'last_update,temp_c'`**
@@ -90,6 +90,6 @@ Only for forecast:
 
 This input can be extendable modifing each weather class inside the skill code.
 
-## Display:
+## Display
 Each number corresponds to one variable:
 + '101' (Screen, movement, voice)
