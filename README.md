@@ -40,9 +40,9 @@ Example: **`'Madrid, Spain'`**
 
 Some cities may not be found.
 ### Lists of available cities:
-+ Time
++ **Time**
   + [Astral](https://astral.readthedocs.io/en/stable/index.html#cities)
-+ Weather
++ **Weather**
   + Apixu: Most of the world cities
 
 ## Day
