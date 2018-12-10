@@ -24,6 +24,7 @@ import actionlib
 from std_msgs.msg import String, Empty
 import multimedia_msgs.msg
 import time_weather_skill.msg
+from common_msgs.msg import KeyValuePair
 
 
 # Skill variables
@@ -40,8 +41,12 @@ class TimeWeatherSkill(Skill):
     """
 
     # Feedback and result of this skill
-    _feedback = multimedia_msgs.msg.MultimediaFeedback() # getattr(multimedia_msgs.msg, server_feedback_str) #my_import(server_module_str, server_feedback_str) # (multimedia_msgs.msg.{Action_name}Feedback)
-    _result = multimedia_msgs.msg.MultimediaResult() # getattr(multimedia_msgs.msg, server_result_str) # (multimedia_msgs.msg.{Action_name}Result)
+    #_feedback = multimedia_msgs.msg.MultimediaFeedback() # getattr(multimedia_msgs.msg, server_feedback_str) #my_import(server_module_str, server_feedback_str) # (multimedia_msgs.msg.{Action_name}Feedback)
+    #_result = multimedia_msgs.msg.MultimediaResult() # getattr(multimedia_msgs.msg, server_result_str) # (multimedia_msgs.msg.{Action_name}Result)
+
+    _feedback = time_weather_skill.msg.TimeWeatherFeedback() # getattr(multimedia_msgs.msg, server_feedback_str) #my_import(server_module_str, server_feedback_str) # (multimedia_msgs.msg.{Action_name}Feedback)
+    _result = time_weather_skill.msg.TimeWeatherResult() # getattr(multimedia_msgs.msg, server_result_str) # (multimedia_msgs.msg.{Action_name}Result)
+
 
     def __init__(self):
         """
@@ -51,6 +56,7 @@ class TimeWeatherSkill(Skill):
         # class variables
         self._as = None # SimpleActionServer variable
         self._goal = "" # Goal a recibir
+        self._result_info_dic = {} # Dictionary container
 
         ## common variables
         self._city_name = city_name_def # City to find the weather
@@ -80,7 +86,7 @@ class TimeWeatherSkill(Skill):
         # Si el servidor actionlib no se ha inicializado:
 
         if not self._as:
-            self._as = actionlib.SimpleActionServer(skill_name, multimedia_msgs.msg.MultimediaAction, execute_cb=self.execute_cb, auto_start=False)
+            self._as = actionlib.SimpleActionServer(skill_name, time_weather_skill.msg.TimeWeatherAction, execute_cb=self.execute_cb, auto_start=False)
             # start the action server
             self._as.start()
 
@@ -108,11 +114,13 @@ class TimeWeatherSkill(Skill):
 
         if(len(goal_vec)>=2): # If specified, it takes the city, if not, it uses the last city used
             self._city_name = goal_vec[1] # Register time
+        else:
+            self._city_name = ''
 
         self._time_var._check_time(self._city_name) # Check time
 
         self._result.result = self._time_var._return_result() # Get result
-        self._result.result_info = str(self._time_var._return_info()) # Result_info = time state
+        self._result_info_dic = self._time_var._return_info() # Result_info = time state
 
     def manage_weather(self, goal_vec):
         """
@@ -135,8 +143,11 @@ class TimeWeatherSkill(Skill):
             self._weather_var._update_source('apixu') # Choose a weather source
             self._weather_var._check_weather(self._city_name, self._date, self._info_required) # Check weather in the specified city
 
+            # Empty the dictionary
+            self._result_info_dic = {}
+            # Fill result_dic and result
             self._result.result = self._weather_var._return_result() # Get result
-            self._result.result_info = str(self._weather_var._return_info()) # Result_info = weather info
+            self._result_info_dic = self._weather_var._return_info() # Result_info = weather info
             #############################################
 
             ############# Manage displays ###############
@@ -148,13 +159,7 @@ class TimeWeatherSkill(Skill):
         else:
             print("Goal size not completed")
             self._result.result = -1 # Fail
-            self._result.result_info = 'Error'
-
-        print('result: ', self._result.result)
-        print('info: ', self._result.result_info)
-
-        #     self._result.result = self._time_var._get_result() # Get result
-        #    self._result.result_info = self._time_var._get_state() + "/" + self._city_name # Result_info = time/city
+            self._result_info_dic = {'state': 'error: Goal size not completed'}
 
     def execute_cb(self, goal):
         """
@@ -163,7 +168,7 @@ class TimeWeatherSkill(Skill):
 
         # default values (In progress)
         self._result.result = -1 # Error
-        self._result.result_info = None # Empty
+        #self._result.result_info = None # Empty
         self._feedback.feedback = 0
 
         ############### Si la skill esta activa: ###################
@@ -202,7 +207,7 @@ class TimeWeatherSkill(Skill):
             except ActionlibException:
                 rospy.logwarn('[%s] Preempted or cancelled' % pkg_name)                 
                 # FAIL
-                self._result.result = -1
+                self._result.result = 1
             #======================================================#
             
         #==========================================================#
@@ -211,20 +216,37 @@ class TimeWeatherSkill(Skill):
             print("STOPPED")
             rospy.logwarn("[%s] Cannot send a goal when the skill is stopped" % pkg_name)
             # ERROR
-            self._result.result = -2
+            self._result.result = -1
         #==========================================================#
         
         # Envio el feedback al final del loop
         self._as.publish_feedback(self._feedback)
         
         #### Envio del resultado y actualizacion del status del goal ###
-        print("### Result sent ###")
-        if self._result.result:
+        # Use the result_info dictionary for filling the result_info variable
+        kvp_list = [] # Auxiliar list for the KeyValuePair values
+        for key in self._result_info_dic:
+            kvp = KeyValuePair()
+            kvp.key = str(key)
+            kvp.value = str(self._result_info_dic[key])
+            kvp_list.append(kvp)
+            print(kvp_list)
+
+        # Empty the result_info
+        size = len(self._result.result_info)
+        for x in range(0, size):
+            self._result.result_info.pop()
+        # Fill the result_info with the dictionary
+        self._result.result_info = kvp_list
+        
+        # Send result
+        if self._result.result == 0:
             rospy.logdebug("setting goal to succeeded")
             self._as.set_succeeded(self._result)
         else:
             rospy.logdebug("setting goal to preempted")
             self._as.set_preempted(self._result)
+        print("### Result sent ###")
         #==============================================================#
 
 

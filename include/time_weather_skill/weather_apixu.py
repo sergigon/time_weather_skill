@@ -165,8 +165,6 @@ class Apixu():
 
 		self.__result = 0
 
-		print('From weather_apixu: ', self.__result_info)
-
 		return self.__result_info
 
 	def _return_result(self):

@@ -88,16 +88,16 @@ class Weather():
             print('Chosen source1')
             #### Make staff ####
 
-            # Update result #
+            # Update result 
+            self.__result = -1
+            self.__result_info = {'state': 'Source1 not found'}
             ####################
 
         else: # No source
             print("Weather source not exists, or bad written")
             # Update result
             self.__result = -1
-            self.__result_info = 'Weather source not exists, or bad written'
-
-        print('From weatherClass: ', self.__result_info)
+            self.__result_info = {'state': 'Weather source not exists, or bad written'}
 
     def _return_result(self):
         """

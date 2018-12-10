@@ -9,12 +9,17 @@ Type_of_information/city/day/information_required/display
 + comment: Return a joke
 
 ## City:
-If not specified, write: 'default'
-By default: Madrid (in future use gps)
+City where to check th time/weather.
+Some cities may not be found.
+
+### Time:
+[Available cities](https://astral.readthedocs.io/en/stable/index.html#cities)
+### Weather:
+#### Apixu:
+
 
 
 ## Day:
-+ 'week': shows all week info
 + 'today' or '0': shows today info
 + 'tomorrow' or '1'
 + '2'
@@ -26,7 +31,7 @@ By default: Madrid (in future use gps)
 ## Information_required:
 + 'basic': Basic info
   + Current (today):
-    + last updated (current/last_updated)
+    + last_updated (current/last_updated)
     + city name (location/name)
     + country name (location/country)
     + date (forecast/forecastday[0]/date)
