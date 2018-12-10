@@ -18,7 +18,6 @@ find_package(catkin REQUIRED COMPONENTS
   #message_generation
   #message_runtime
 )
-find_package(multimedia_msgs REQUIRED)
 #find_package(common_msgs REQUIRED)
 
 ## System dependencies are found with CMake's conventions
@@ -115,7 +114,7 @@ catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES time_weather_skill
   CATKIN_DEPENDS roscpp rospy std_msgs roslib actionlib_msgs 
-  DEPENDS multimedia_msgs common_msgs
+  DEPENDS common_msgs
 )
 
 ###########

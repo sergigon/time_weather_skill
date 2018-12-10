@@ -22,7 +22,6 @@ import actionlib
 
 # Messages
 from std_msgs.msg import String, Empty
-import multimedia_msgs.msg
 import time_weather_skill.msg
 from common_msgs.msg import KeyValuePair
 
