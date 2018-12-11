@@ -27,10 +27,15 @@ from common_msgs.msg import KeyValuePair as kvpa
 ######################################################################
 
 def makeCA_info(etts_text):
+
+    now = rospy.get_rostime().nsecs
+
     msg = CA()
     msg.type = "robot_giving_info"
-    msg.ca_name = str(time.time())
+    msg.ca_name = str(now)
     msg.duration = 0
+    msg.priority = 1
+    msg.emitter = "time_weather_ca"
     
     kvp = kvpa()
     kvp.key = "etts_text"

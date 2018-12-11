@@ -68,7 +68,7 @@ class Apixu():
         @param lang: Language. By default in spanish.
         @param key: Key to make the request.
         """
-        '''
+		'''
 		# Check if JSON and txt file exists
 		data_json = self.__create_json.load(self.__file_name) # Load JSON file
 		data_json_check = self.__create_json.load(self.__file_name_check) # Load JSON check file

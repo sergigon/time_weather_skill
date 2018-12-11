@@ -141,10 +141,11 @@ class TimeWeatherSkill(Skill):
         ca_info = makeCA_info('Hola caracola.')
         self.ca_pub.publish(ca_info)
         rospy.sleep(10)
-
+        '''
         print('makeCA_gesture_info')
         ca_gesture_info = makeCA_gesture_info('alz_happy')
         self.ca_pub.publish(ca_gesture_info)
+        '''
         #############################################
         #    self._result.result = 0 # Success
 
@@ -283,6 +284,7 @@ if __name__ == '__main__':
 
         # create and spin the node
         node = TimeWeatherSkill()
+        rospy.sleep(10)
         node.manage_display("111")
         rospy.spin()
     except rospy.ROSInterruptException:
