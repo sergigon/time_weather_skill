@@ -27,8 +27,6 @@ from interaction_msgs.msg import CA
 import time_weather_skill.msg
 from common_msgs.msg import KeyValuePair
 
-robot = "/alz4/"
-
 # Skill variables
 # Package name
 pkg_name = 'time_weather_skill'
@@ -80,8 +78,8 @@ class TimeWeatherSkill(Skill):
         print("create_msg_srv() called")
 
         # publishers and subscribers
-        self.ca_pub = rospy.Publisher(robot + "hri_manager/ca_activations", CA, queue_size=10) # CA publisher
-        self.ca_deactivation_pub = rospy.Publisher(robot + "hri_manager/ca_deactivations", String, queue_size=10) # CA deactivation publisher
+        self.ca_pub = rospy.Publisher("hri_manager/ca_activations", CA, queue_size=10) # CA publisher
+        self.ca_deactivation_pub = rospy.Publisher("hri_manager/ca_deactivations", String, queue_size=10) # CA deactivation publisher
 
         #self.sub_response = rospy.Subscriber(robot + "hri_manager/response", CA, self.response_callback) # CA subscriber
 
@@ -254,7 +252,6 @@ class TimeWeatherSkill(Skill):
             kvp.key = str(key)
             kvp.value = str(self._result_info_dic[key])
             kvp_list.append(kvp)
-            print(kvp_list)
 
         # Empty the result_info
         size = len(self._result.result_info)

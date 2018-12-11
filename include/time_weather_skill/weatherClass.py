@@ -126,6 +126,7 @@ if __name__ == '__main__':
 
         weather = Weather() # Create object Weather
         weather._update_source('apixu') # Choose a weather source
+
         weather._check_weather('Madrid', 'today', 'basic') # Check weather in the specified city
 
     except rospy.ROSInterruptException:

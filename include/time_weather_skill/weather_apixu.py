@@ -15,6 +15,9 @@ import rospy
 import requests # URL requests
 import commands # Comandos de terminal (http://www.rafalinux.com/?p=1613)
 
+from time_weather_skill.create_json import CreateJson
+from time_weather_skill.create_txt import CreateTxt
+
 pkg_name = 'time_weather_skill'
 
 class Apixu():
@@ -50,6 +53,12 @@ class Apixu():
 		self.__result_info = {} # Result info
 		self.__data = '' # Reuest data in JSON format
 
+		# Create JSON
+		self.__create_json = CreateJson() # CreateJson object
+		self.__file_name = "apixu" # Apixu json and txt file
+		self.__file_name_check = self.__file_name + "_check" # Apixu json and txt file
+		self.__create_text = CreateTxt() # CreateJson object
+
 	def _request(self, location=location_def, days=apixu_limit_weather, lang='es', key=api_key_serg):
 		"""
         Request method.
@@ -59,7 +68,41 @@ class Apixu():
         @param lang: Language. By default in spanish.
         @param key: Key to make the request.
         """
+        '''
+		# Check if JSON and txt file exists
+		data_json = self.__create_json.load(self.__file_name) # Load JSON file
+		data_json_check = self.__create_json.load(self.__file_name_check) # Load JSON check file
+		#data_txt = self.__create_text.load(self.__file_name) # Load txt file
+		if (data_json != -1 and data_json_check != -1): # JSON and txt exists
+			try:
+				# Check if 'city', 'country' and 'lang' coincide
+				if(data_json['location']['name'] == data_json_check['city']
+						and data_json['location']['country'] == data_json_check['country']
+						and lang == data_json_check['lang']): # Coincide
+					print(data_json['current']['last_updated'])
+					if (data_json['current']['last_updated'] != data_json_check['last_updated']): # Not updated
+						# Make request
+						# Parametros para hacer el URL request
+						params = {
+							'key': key,
+							'q': location,
+							'days': days, # Only for forecast
+							'lang': lang # Espanol by default
+						}
 
+						# Hago el URL request para el weather
+						r = requests.get(self.url_forecast, params = params)
+						# Get the data from the URL in JSON format
+						self.__data = r.json()
+					else: # Already updated
+						print("Already made request, not making new request")
+						self.__data = data_json
+			except:
+				print('JSON content not correct')
+		else:
+			print("Not uploading data from file")
+		'''
+		# Make request
 		# Parametros para hacer el URL request
 		params = {
 			'key': key,
@@ -70,25 +113,33 @@ class Apixu():
 
 		# Hago el URL request para el weather
 		r = requests.get(self.url_forecast, params = params)
-		self.__data = r.json() # Get the data from the URL in JSON format
-
+		# Get the data from the URL in JSON format
+		self.__data = r.json()
+			
+		'''
+		# Write the data in the json files
+		data_check = {'last_updated': data_json['current']['last_updated'],
+						'city': data_json['location']['name'],
+						'country': data_json['location']['country'],
+						'lang': lang
+						}
+		self.__create_json.write(self.__data, self.__file_name)
+		self.__create_json.write(data_check, self.__file_name_check)
+		#self.__create_text.write(self.__data['current']['last_updated'] + '\n' + lang, self.__file_name)
 		# If error set something #
 		#                        #
 		##########################
+		'''
 
-	def _create_json(self, json_in):
-		"""
-		Method to create a json file.
-
-		@param json_in: json variable to make the file.
-		"""
-
-	def _update(self):
+	def _update_json(self):
 		"""
 		Looks if there is already weather info in local.
 
 		Used to not make unnecessary requests.
 		"""
+
+		self.__create_json.file_exists(self.__json_file_name)
+
 	def _fix_date(self, date):
 		"""
 		Fix the date and converts to int.
@@ -188,8 +239,8 @@ if __name__ == '__main__':
 
     	apixu = Apixu()
     	apixu._request('Madrid')
-    	apixu._get_info('tomorrow', 'advanced, s')
-    	print(apixu._return_info())
+    	#apixu._get_info('tomorrow', 'advanced, s')
+    	#print(apixu._return_info())
 
     except rospy.ROSInterruptException:
         pass
