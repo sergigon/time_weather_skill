@@ -3,22 +3,19 @@
 
 # File: general_functions.py
 
-"""
-RobAlz State Machine. General functions definition.
-This module contains general functions created to communicate to the HRI Manager.
-"""
-
-__author__ = "Esther Salichs San José <esalichs@ing.uc3m.es>"
-__date__ = "2017-05"
-__version__ = "$ Revision: 1.0 $"
-__credits__ = """Social Robots Group. Robotics Lab. University Carlos III of Madrid"""
+__author__ = "Sergio Gonzalez Diaz"
+__copyright__ = "Social Robots Group. Robotics Lab. University Carlos III of Madrid"
+__credits__ = ["Sergio Gonzalez Diaz"]
+__license__ = "LEUC3M v1.0"
+__version__ = "0.0.0"
+__maintainer__ = "Sergio Gonzalez Diaz"
+__email__ = "sergigon@ing.uc3m.es"
+__status__ = "Development"
 
 import time
 import roslib
-#roslib.load_manifest('state_machine')
 import rospy
-#import smach
-#import smach_ros
+
 
 from std_msgs.msg import String, Int16, Empty
 from interaction_msgs.msg import CA
@@ -27,7 +24,6 @@ from common_msgs.msg import KeyValuePair as kvpa
 ######################################################################
 
 def makeCA_info(etts_text):
-
     now = rospy.get_rostime().nsecs
 
     msg = CA()
@@ -45,9 +41,11 @@ def makeCA_info(etts_text):
     return msg
     
 def makeCA_gesture_info(gesture):
+    now = rospy.get_rostime().nsecs
+
     msg = CA()
     msg.type = "robot_giving_info"
-    msg.ca_name = str(time.time())
+    msg.ca_name = str(now)
     msg.duration = 0
     
     kvp = kvpa()

@@ -14,6 +14,7 @@ from skill.skill import Skill, ActionlibException, NATURAL
 from time_weather_skill.timeClass import Time # Time class
 from time_weather_skill.weatherClass import Weather # Weather class
 from time_weather_skill.general_functions import makeCA_info, makeCA_gesture_info # Voice communication CA functions
+from time_weather_skill.create_json import CreateJson # For creating and reading JSON files
 
 import rospy
 import roslib
@@ -126,21 +127,74 @@ class TimeWeatherSkill(Skill):
     def manage_display(self, display):
         ############# Manage displays ###############
         display_vec = list(display) # Divides goal by fields
-        self._screen = display_vec[0]
-        self._movement = display_vec[1]
-        self._voice = display_vec[2]
+        self._screen = int(display_vec[0])
+        self._movement = int(display_vec[1])
+        self._voice = int(display_vec[2])
+
+        print(self._screen)
+        print(self._movement)
+        print(self._voice)
 
         if(self._screen == 1):
-            pass
+            conditions_data = CreateJson() # Create object to read JSON
+            conditions_dic = conditions_data.load('english_conditions_data') # Load JSON
+            if(conditions_dic != -1): # JSON file found
+                code, icon, is_day, date, city_name = '', '', 1, '', ''
+                if 'code' in self._result_info_dic:
+                    code = self._result_info_dic['code'] # Get condition code
+                for n in conditions_dic:
+                    print(n['code'])
+                    if(n['code'] == code):
+                        icon = n['icon']
+                        break
+                if 'is_day' in self._result_info_dic:
+                    is_day = self._result_info_dic['is_day'] # Get day condition (for finding weather icon)
+                if 'date' in self._result_info_dic:
+                    date = self._result_info_dic['date'] # Get date
+                if 'city_name' in self._result_info_dic:
+                    city_name = self._result_info_dic['city_name'] # Get city name
+                if 'avg_temp_c' in self._result_info_dic:
+                    avg_temp_c = self._result_info_dic['avg_temp_c'] # Get average temperature
+                print(code, icon, is_day, date, city_name, avg_temp_c)
+
+            else:
+                print('conditions_data JSON not found')
         if(self._movement == 1):
-            pass
+            print('makeCA_gesture_info')
+            ca_gesture_info = makeCA_gesture_info('alz_talking_03')
+            self.ca_pub.publish(ca_gesture_info)
+            rospy.sleep(1)
         if(self._voice == 1):
-            pass
+            print('voice')
+            weather_speech, date_speech, city_name_speech, text_speech, temp_speech, precip_speech = "", "", "", "", "", ""
+            for key in self._result_info_dic:
+                if(key == 'date'):
+                    date_vec = self._result_info_dic[key].split("-") # Divides date by year-month-day
+                    date_speech = "El dia " + str(date_vec[2]) + " del " + str(date_vec[1])
+               
+                if(key == 'city_name'):
+                    city_name_speech = "en " + str(self._result_info_dic[key]) + " "
+                
+                if(key == 'text'):
+                    text_speech = "estara " + str(self._result_info_dic[key]) + " "
+                
+                if(key == 'avg_temp_c'):
+                    temp_vec = str(self._result_info_dic[key]).split(".") # Divides temp: 11.4 -> 11 and 4
+                    temp_speech = "hara una temperatura de " + str(temp_vec[0]) + " coma " + str(temp_vec[1]) + " grados "
+
+                weather_speech = date_speech + city_name_speech + text_speech + temp_speech + precip_speech
+            ca_info = makeCA_info(weather_speech)
+            self.ca_pub.publish(ca_info)
+            rospy.sleep(1)
 
         print('makeCA_info()')
-        ca_info = makeCA_info('Hola caracola.')
+        
+        '''
+        ca_info = makeCA_info('Hola soy vicente del bosque')
         self.ca_pub.publish(ca_info)
-        rospy.sleep(10)
+        '''
+
+        #rospy.sleep(10)
         '''
         print('makeCA_gesture_info')
         ca_gesture_info = makeCA_gesture_info('alz_happy')
@@ -218,7 +272,7 @@ class TimeWeatherSkill(Skill):
                     ################### Weather ####################
                     self.manage_weather(goal_vec)
                     if(len(goal_vec)>=5): # Check if the display field is completed
-                        self.manage_display(goal_vec[5])
+                        self.manage_display(goal_vec[4])
                     ################################################
 
                 else: # Bad goal
@@ -284,8 +338,8 @@ if __name__ == '__main__':
 
         # create and spin the node
         node = TimeWeatherSkill()
-        rospy.sleep(10)
-        node.manage_display("111")
+        rospy.sleep(5)
+        print("ola")
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
