@@ -14,6 +14,7 @@ import rospy
 
 import requests # URL requests
 import commands # Comandos de terminal (http://www.rafalinux.com/?p=1613)
+import datetime # To get actual date
 
 from time_weather_skill.create_json import CreateJson
 from time_weather_skill.create_txt import CreateTxt
@@ -59,50 +60,17 @@ class Apixu():
 		self.__file_name_check = self.__file_name + "_check" # Apixu json and txt file
 		self.__create_text = CreateTxt() # CreateJson object
 
-	def _request(self, location=location_def, days=apixu_limit_weather, lang='es', key=api_key_serg):
+	def _request_URL(self, location, days=apixu_limit_weather, lang='es', key=api_key_serg):
 		"""
-        Request method.
+        Request URL method.
 
         @param location: City to calculate weather. Format: "Madrid" or "Madrid, Spain".
         @param days: Forecast days.
         @param lang: Language. By default in spanish.
         @param key: Key to make the request.
-        """
-		'''
-		# Check if JSON and txt file exists
-		data_json = self.__create_json.load(self.__file_name) # Load JSON file
-		data_json_check = self.__create_json.load(self.__file_name_check) # Load JSON check file
-		#data_txt = self.__create_text.load(self.__file_name) # Load txt file
-		if (data_json != -1 and data_json_check != -1): # JSON and txt exists
-			try:
-				# Check if 'city', 'country' and 'lang' coincide
-				if(data_json['location']['name'] == data_json_check['city']
-						and data_json['location']['country'] == data_json_check['country']
-						and lang == data_json_check['lang']): # Coincide
-					print(data_json['current']['last_updated'])
-					if (data_json['current']['last_updated'] != data_json_check['last_updated']): # Not updated
-						# Make request
-						# Parametros para hacer el URL request
-						params = {
-							'key': key,
-							'q': location,
-							'days': days, # Only for forecast
-							'lang': lang # Espanol by default
-						}
 
-						# Hago el URL request para el weather
-						r = requests.get(self.url_forecast, params = params)
-						# Get the data from the URL in JSON format
-						self.__data = r.json()
-					else: # Already updated
-						print("Already made request, not making new request")
-						self.__data = data_json
-			except:
-				print('JSON content not correct')
-		else:
-			print("Not uploading data from file")
-		'''
-		# Make request
+        @return: Request URL request data.
+        """
 		# Parametros para hacer el URL request
 		params = {
 			'key': key,
@@ -114,22 +82,75 @@ class Apixu():
 		# Hago el URL request para el weather
 		r = requests.get(self.url_forecast, params = params)
 		# Get the data from the URL in JSON format
-		self.__data = r.json()
+		return r.json()
+		print('JSON content not correct')
+
+	def _request(self, location, days=apixu_limit_weather, lang='es', key=api_key_serg):
+		"""
+        Request method.
+
+        Make a local or URL request, and fill the variable self.__data with the info requested.
+
+        @param location: City to calculate weather. Format: "Madrid" or "Madrid, Spain".
+        @param days: Forecast days.
+        @param lang: Language. By default in spanish.
+        @param key: Key to make the request.
+        """
+		
+		############## Local request ###############
+		# Check if JSON files exists
+		data_json = self.__create_json.load(self.__file_name) # Load JSON file
+		data_json_check = self.__create_json.load(self.__file_name_check) # Load JSON check file
+
+		updated = False # Variable to check if already updated
+		if (data_json != -1 and data_json_check != -1): # JSON files exists
+			try:
+				# Check if 'city' and 'lang' coincide
+				if(location == data_json_check['city'] and lang == data_json_check['lang']): # 'city' and 'lang' coincide
+					now = datetime.datetime.now() # Get current date
+					if(data_json_check['day'] == now.day and data_json_check['month'] == now.month and data_json_check['year'] == now.year): # Already updated
+						print("Already made request, not making new request")
+						self.__data = data_json # Get JSON data
+						updated = True
+			except:
+				print("Parameters not existing")
+		else:
+			print("JSON files do not exist")
+		############################################
+
+		############### URL request ################
+		if (updated == False): # NOT updated
+			print("Making an URL request")
+			# Get the data from the URL in JSON format
+			self.__data = self._request_URL(location, days, lang, key) # URL request
+			if (self.__data != -1): # NO error URL request
+				date_now = self.__data['current']['last_updated'].split(" ") # Separate the goal in various parts
+				date_now_vec = date_now[0].split("-")
+				# Write the data in the json files
+				data_check = {'last_updated': self.__data['current']['last_updated'],
+					'city': self.__data['location']['name'],
+					'country': self.__data['location']['country'],
+					'lang': lang,
+					'day': date_now_vec[2],
+					'month': date_now_vec[1],
+					'year': date_now_vec[0]
+					}
+				self.__create_json.write(self.__data, self.__file_name) # Write weather info into JSON file
+				self.__create_json.write(data_check, self.__file_name_check) # Write weather check info into JSON file
+			else: # Error URL request
+				print('Error en el request')
 			
-		'''
-		# Write the data in the json files
-		data_check = {'last_updated': data_json['current']['last_updated'],
-						'city': data_json['location']['name'],
-						'country': data_json['location']['country'],
-						'lang': lang
-						}
-		self.__create_json.write(self.__data, self.__file_name)
-		self.__create_json.write(data_check, self.__file_name_check)
-		#self.__create_text.write(self.__data['current']['last_updated'] + '\n' + lang, self.__file_name)
+		############################################
+		
+		
+		
+
+		
+
 		# If error set something #
 		#                        #
 		##########################
-		'''
+		
 
 	def _update_json(self):
 		"""
