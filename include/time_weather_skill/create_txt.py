@@ -15,11 +15,9 @@ import rospkg
 import os
 import rospy
 
-rospack = rospkg.RosPack()				# rospkg object to get the json path
+rospack = rospkg.RosPack() # rospkg object to get the json path
 
 pkg_name = "time_weather_skill"
-
-#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> CreateJSON class <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 class CreateTxt:
 

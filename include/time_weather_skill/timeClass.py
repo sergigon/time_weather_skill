@@ -33,8 +33,8 @@ class Time():
         """
 
         # class variables    
-        self.__state = {} # Info
         self.__result = -1 # Result
+        self.__result_info = {} # Info
         self.__city_name = ''
 
         # Astral variables
@@ -66,13 +66,13 @@ class Time():
         Checks if it is day or night.
         If not specified, it uses the last city used.
 
-        Change the variable self.__state ('day' or 'night').
+        Change the variable self.__result_info ('day' or 'night').
 
         @param city: City to calculate time. It updates self.__city.
         """
 
         # Reset
-        self.__state = {}
+        self.__result_info = {}
 
         # Update city parameters
         self.__update_city_params(city)
@@ -82,17 +82,17 @@ class Time():
             sun = self.__city.sun(date=datetime.date.today(), local=False)
 
             if sun['dawn'].replace(tzinfo=None) < datetime.datetime.now() < sun['dusk'].replace(tzinfo=None):
-                self.__state = {'state': 'day', 'city_name': self.__city_name}
+                self.__result_info = {'is_day': 1, 'city_name': self.__city_name}
             else:
-                self.__state = {'state': 'night', 'city_name': self.__city_name}
+                self.__result_info = {'is_day': 0, 'city_name': self.__city_name}
         else: # Error
-            self.__state = {'state': 'error: City not available', 'city_name': self.__city_name}
+            self.__result_info = {'is_day': -1, 'city_name': self.__city_name}
 
     def _return_info(self):
         """
-        Return state
+        Return info
         """
-        return self.__state
+        return self.__result_info
         
     def _return_result(self):
         """
