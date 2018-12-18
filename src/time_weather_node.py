@@ -107,12 +107,12 @@ class TimeWeatherSkill(Skill):
 
     def manage_time(self, goal_vec):
         """
-        Manager of the time class. It updates the result and result_info
+        Manager of the time class. It updates the result and result_info.
 
         @param goal_vec: Vector of the goal.
         """
 
-        print("Chosen time")
+        print("----- Chosen time -----")
 
         if(len(goal_vec)>=2): # If specified, it takes the city, if not, it uses the last city used
             self._city_name = goal_vec[1] # Register time
@@ -122,28 +122,32 @@ class TimeWeatherSkill(Skill):
         self._time_var._check_time(self._city_name) # Check time
 
         self._result.result = self._time_var._return_result() # Get result
-        self._result_info_dic = self._time_var._return_info() # Result_info = time state
+        self._result_info_dic = self._time_var._return_info() # Result_info = time info
 
     def manage_display(self, display):
+        """
+        Manager of the display. It updates the result and result_info.
+
+        @param display: String of the display goal.
+        """
+
         ############# Manage displays ###############
         display_vec = list(display) # Divides goal by fields
         self._screen = int(display_vec[0])
         self._movement = int(display_vec[1])
         self._voice = int(display_vec[2])
+        #############################################
 
-        print(self._screen)
-        print(self._movement)
-        print(self._voice)
-
+        ################# Screen ####################
         if(self._screen == 1):
             conditions_data = CreateJson() # Create object to read JSON
             conditions_dic = conditions_data.load('english_conditions_data') # Load JSON
+
             if(conditions_dic != -1): # JSON file found
-                code, icon, is_day, date, city_name = '', '', 1, '', ''
+                code, icon, is_day, date, city_name, avg_temp_c = '', '', 1, '', '', '' # Initialize text variables
                 if 'code' in self._result_info_dic:
                     code = self._result_info_dic['code'] # Get condition code
-                for n in conditions_dic:
-                    print(n['code'])
+                for n in conditions_dic: # Search the name of the icon, using the code
                     if(n['code'] == code):
                         icon = n['icon']
                         break
@@ -155,15 +159,21 @@ class TimeWeatherSkill(Skill):
                     city_name = self._result_info_dic['city_name'] # Get city name
                 if 'avg_temp_c' in self._result_info_dic:
                     avg_temp_c = self._result_info_dic['avg_temp_c'] # Get average temperature
-                print(code, icon, is_day, date, city_name, avg_temp_c)
+                #print(code, icon, is_day, date, city_name, avg_temp_c)
 
             else:
                 print('conditions_data JSON not found')
+        #############################################
+
+        ################# Movement ##################
         if(self._movement == 1):
             print('makeCA_gesture_info')
             ca_gesture_info = makeCA_gesture_info('alz_talking_03')
             self.ca_pub.publish(ca_gesture_info)
             rospy.sleep(1)
+        #############################################
+
+        ################## Voice ####################
         if(self._voice == 1):
             print('voice')
             weather_speech, date_speech, city_name_speech, text_speech, temp_speech, precip_speech = "", "", "", "", "", ""
@@ -186,22 +196,7 @@ class TimeWeatherSkill(Skill):
             ca_info = makeCA_info(weather_speech)
             self.ca_pub.publish(ca_info)
             rospy.sleep(1)
-
-        print('makeCA_info()')
-        
-        '''
-        ca_info = makeCA_info('Hola soy vicente del bosque')
-        self.ca_pub.publish(ca_info)
-        '''
-
-        #rospy.sleep(10)
-        '''
-        print('makeCA_gesture_info')
-        ca_gesture_info = makeCA_gesture_info('alz_happy')
-        self.ca_pub.publish(ca_gesture_info)
-        '''
         #############################################
-        #    self._result.result = 0 # Success
 
     def manage_weather(self, goal_vec):
         """
@@ -213,7 +208,7 @@ class TimeWeatherSkill(Skill):
         @param goal_vec: Vector of the goal.
         """
 
-        print("Chosen weather")
+        print("----- Chosen weather -----")
         if(len(goal_vec)>=4): # Check if all fields are completed
 
             ############## Check weather ################
@@ -230,15 +225,22 @@ class TimeWeatherSkill(Skill):
             self._result.result = self._weather_var._return_result() # Get result
             self._result_info_dic = self._weather_var._return_info() # Result_info = weather info
             #############################################
+            if(self._result.result == -1):
+                return False
+            else:
+                return True
 
         else:
             print("Goal size not completed")
             self._result.result = -1 # Fail
-            self._result_info_dic = {'state': 'error: Goal size not completed'}
+            self._result_info_dic = {}
+            return False
 
     def execute_cb(self, goal):
         """
         Callback of the node. Activated when a goal is received
+
+        @param goal: time_weather_skill goal.
         """
 
         # default values (In progress)
@@ -270,12 +272,19 @@ class TimeWeatherSkill(Skill):
 
                 elif (goal_vec[0] == "weather"): # Weather
                     ################### Weather ####################
-                    self.manage_weather(goal_vec)
-                    if(len(goal_vec)>=5): # Check if the display field is completed
-                        self.manage_display(goal_vec[4])
+                    weather = self.manage_weather(goal_vec)
+                    if(weather == True): # Check if weather has been requested
+                        if(len(goal_vec)>=5): # Check if the display field is completed
+                            self.manage_display(goal_vec[4])
+                        else:
+                            print("Display not specified")
+                            self._result.result = -1 # Fail
+                    else:
+                        print("==== Weather ERROR ====")
+                        self._result.result = -1 # Fail
                     ################################################
 
-                else: # Bad goal
+                else: # Wrong goal
                     print("Goal not correct")
                     self._result.result = -1 # Fail
                 #==================================================#
@@ -284,7 +293,7 @@ class TimeWeatherSkill(Skill):
             except ActionlibException:
                 rospy.logwarn('[%s] Preempted or cancelled' % pkg_name)                 
                 # FAIL
-                self._result.result = 1
+                self._result.result = 1 # Preempted
             #======================================================#
             
         #==========================================================#
@@ -293,7 +302,7 @@ class TimeWeatherSkill(Skill):
             print("STOPPED")
             rospy.logwarn("[%s] Cannot send a goal when the skill is stopped" % pkg_name)
             # ERROR
-            self._result.result = -1
+            self._result.result = -1 # Fail
         #==========================================================#
         
         # Envio el feedback al final del loop
@@ -322,7 +331,9 @@ class TimeWeatherSkill(Skill):
         else:
             rospy.logdebug("setting goal to preempted")
             self._as.set_preempted(self._result)
+        print("###################")
         print("### Result sent ###")
+        print("###################")
         #==============================================================#
 
 
@@ -338,8 +349,7 @@ if __name__ == '__main__':
 
         # create and spin the node
         node = TimeWeatherSkill()
-        rospy.sleep(5)
-        print("ola")
+        rospy.sleep(1)
         rospy.spin()
     except rospy.ROSInterruptException:
         pass

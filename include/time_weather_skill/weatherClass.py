@@ -52,7 +52,7 @@ class Weather():
         for s in self.__source_list:
             if(source == s):
                 self.__source = source # If the source exists, it updates
-                print('New source: ' + self.__source)
+                print('Updated source: ' + self.__source)
                 break
         else:
             self.__source = '' # If the source does not exists, the variable gets empty
@@ -76,12 +76,15 @@ class Weather():
         if (self.__source == 'apixu'): # Apixu
             print('Chosen apixu')
             #### Make staff ####
-            self.__apixu._request(city)
-            self.__apixu._get_info(date, info_required)
-
-            # Update results
-            self.__result = self.__apixu._return_result()
-            self.__result_info = self.__apixu._return_info()
+            if(self.__apixu._request(city) == True): # Make request and check if made
+                self.__apixu._get_info(date, info_required) # Update the results variables
+                # Update results
+                self.__result = self.__apixu._return_result()
+                self.__result_info = self.__apixu._return_info()
+            else:
+                # Update results
+                self.__result = -1
+                self.__result_info = {}
             ####################
 
         elif (self.__source == 'source1'): # Source1
@@ -90,14 +93,14 @@ class Weather():
 
             # Update result 
             self.__result = -1
-            self.__result_info = {'state': 'Source1 not found'}
+            self.__result_info = {}
             ####################
 
         else: # No source
             print("Weather source not exists, or bad written")
             # Update result
             self.__result = -1
-            self.__result_info = {'state': 'Weather source not exists, or bad written'}
+            self.__result_info = {}
 
     def _return_result(self):
         """

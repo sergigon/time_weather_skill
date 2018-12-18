@@ -58,19 +58,19 @@ class Apixu():
 		self.__create_json = CreateJson() # CreateJson object
 		self.__file_name = "apixu" # Apixu json and txt file
 		self.__file_name_check = self.__file_name + "_check" # Apixu json and txt file
-		self.__create_text = CreateTxt() # CreateJson object
 
-	def _request_URL(self, location, days=apixu_limit_weather, lang='es', key=api_key_serg):
+	def _request_URL(self, location, days, lang, key):
 		"""
-        Request URL method.
+        Request URL method. Modify self.__data variable.
 
         @param location: City to calculate weather. Format: "Madrid" or "Madrid, Spain".
         @param days: Forecast days.
         @param lang: Language. By default in spanish.
         @param key: Key to make the request.
 
-        @return: Request URL request data.
+        @return: True: URL request succeded. False: URL request error.
         """
+
 		# Parametros para hacer el URL request
 		params = {
 			'key': key,
@@ -80,10 +80,62 @@ class Apixu():
 		}
 
 		# Hago el URL request para el weather
-		r = requests.get(self.url_forecast, params = params)
-		# Get the data from the URL in JSON format
-		return r.json()
-		print('JSON content not correct')
+		try:
+			r = requests.get(self.url_forecast, params = params)
+			# Get the data from the URL in JSON format
+			if 'error' in r.json(): # ERROR in the request
+				self.__data = {}
+				print('URL request ERROR')
+				print(r.json()['error']['message']) # Print the error
+				return False
+			else: # NO error in the request
+				self.__data = r.json()
+				print('URL request succeded')
+				return True
+		except:
+			print('Connection ERROR')
+			return False
+
+		
+
+	def _request_local(self, location, lang, file_name, file_name_check):
+		"""
+        Request local method. Modify self.__data variable.
+
+        @param location: City to calculate weather. Format: "Madrid" or "Madrid, Spain".
+        @param lang: Language. By default in spanish.
+        @param file_name: Name of the file to do the request.
+		@param file_name_check: Name of the check file to do the request.
+
+        @return: True: local request succeded. False: local request error.
+        """
+
+		# Check if JSON files exists
+		data_json = self.__create_json.load(file_name) # Load JSON file
+		data_json_check = self.__create_json.load(file_name_check) # Load JSON check file
+
+		if (data_json != -1 and data_json_check != -1): # JSON files exists
+			try:
+				# Check if 'city' and 'lang' coincide
+				if(location.lower() == data_json_check['city'].lower() and lang.lower() == data_json_check['lang'].lower()): # 'city' and 'lang' coincide
+					now = datetime.datetime.now() # Get current date
+					if(data_json_check['day'] == str(now.day) and data_json_check['month'] == str(now.month) and data_json_check['year'] == str(now.year)): # Already updated
+						print('Local request succeded')
+						self.__data = data_json # Get JSON data
+						return True
+					else:
+						print("Local request ERROR: File not updated")
+						return False
+				else:
+					print("Local request ERROR: 'city' or 'lang' do not coincide")
+					return False
+			except:
+				print("Local request ERROR: Parameters not existing")
+				return False
+		else:
+			print("Local request ERROR: JSON files do not exist")
+			return False
+
 
 	def _request(self, location, days=apixu_limit_weather, lang='es', key=api_key_serg):
 		"""
@@ -95,75 +147,61 @@ class Apixu():
         @param days: Forecast days.
         @param lang: Language. By default in spanish.
         @param key: Key to make the request.
+
+        @return: True: request success. False: request error.
         """
+
+		# Initialize the name files
+		file_name_full = self.__file_name + '_' + location.lower() + '_' + lang
+		file_name_check_full = self.__file_name_check + '_' + location.lower() + '_' + lang
 		
 		############## Local request ###############
-		# Check if JSON files exists
-		data_json = self.__create_json.load(self.__file_name) # Load JSON file
-		data_json_check = self.__create_json.load(self.__file_name_check) # Load JSON check file
-
-		updated = False # Variable to check if already updated
-		if (data_json != -1 and data_json_check != -1): # JSON files exists
-			try:
-				# Check if 'city' and 'lang' coincide
-				if(location == data_json_check['city'] and lang == data_json_check['lang']): # 'city' and 'lang' coincide
-					now = datetime.datetime.now() # Get current date
-					if(data_json_check['day'] == now.day and data_json_check['month'] == now.month and data_json_check['year'] == now.year): # Already updated
-						print("Already made request, not making new request")
-						self.__data = data_json # Get JSON data
-						updated = True
-			except:
-				print("Parameters not existing")
+		print("## Making a local request ##")
+		local_request = self._request_local(location, lang, file_name_full, file_name_check_full)
+		if(local_request == True):
+			return True
 		else:
-			print("JSON files do not exist")
+			print('Local request not available')
 		############################################
 
 		############### URL request ################
-		if (updated == False): # NOT updated
-			print("Making an URL request")
-			# Get the data from the URL in JSON format
-			self.__data = self._request_URL(location, days, lang, key) # URL request
-			if (self.__data != -1): # NO error URL request
-				date_now = self.__data['current']['last_updated'].split(" ") # Separate the goal in various parts
-				date_now_vec = date_now[0].split("-")
-				# Write the data in the json files
-				data_check = {'last_updated': self.__data['current']['last_updated'],
-					'city': self.__data['location']['name'],
-					'country': self.__data['location']['country'],
-					'lang': lang,
-					'day': date_now_vec[2],
-					'month': date_now_vec[1],
-					'year': date_now_vec[0]
-					}
-				self.__create_json.write(self.__data, self.__file_name) # Write weather info into JSON file
-				self.__create_json.write(data_check, self.__file_name_check) # Write weather check info into JSON file
-			else: # Error URL request
-				print('Error en el request')
-			
+		print("## Making an URL request ##")
+		# Get the data from the URL in JSON format
+		url_request = self._request_URL(location, days, lang, key) # URL request
 		############################################
-		
-		
-		
 
 		
+		if (url_request == False): # Error URL request
+			print('Error en el URL request')
+			print('Not writing JSON file')
+			return False
 
-		# If error set something #
-		#                        #
-		##########################
-		
+		else: # NO error URL request
+			######## Save data in JSON files #######
+			# Separate the last updated date in various parts 
+			date_now = self.__data['current']['last_updated'].split(" ")
+			date_now_vec = date_now[0].split("-")
 
-	def _update_json(self):
-		"""
-		Looks if there is already weather info in local.
-
-		Used to not make unnecessary requests.
-		"""
-
-		self.__create_json.file_exists(self.__json_file_name)
+			# Fill the JSON check file
+			data_check = {'last_updated': self.__data['current']['last_updated'],
+				'city': self.__data['location']['name'],
+				'country': self.__data['location']['country'],
+				'lang': lang,
+				'day': date_now_vec[2],
+				'month': date_now_vec[1],
+				'year': date_now_vec[0]
+				}
+			# Write the data in the JSON files
+			self.__create_json.write(self.__data, file_name_full) # Write weather info into JSON file
+			self.__create_json.write(data_check, file_name_check_full) # Write weather check info into JSON file
+			########################################
+			return True
 
 	def _fix_date(self, date):
 		"""
 		Fix the date and converts to int.
+
+		@param date: date to fix.
 		"""
 
 		if (date == 'today'):
