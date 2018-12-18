@@ -28,7 +28,7 @@ Explain in detail how to run the system: nodes, launch files, etc.
 
 ## Goal
 ### Goal structure
-`'Type_of_information/city/day/information_required/display'`
+`'Type_of_information/city/day/forecast/information_required/display'`
 
 Examples:
 + `'weather/madrid/2/basic/101'`

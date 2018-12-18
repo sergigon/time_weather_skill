@@ -29,7 +29,6 @@ class Weather():
         """
 
         # Class variables
-        self.__city = ""
         self.__result = -1 # Weather result
         self.__result_info = "" # Weather info
 
@@ -58,25 +57,22 @@ class Weather():
             self.__source = '' # If the source does not exists, the variable gets empty
             print('NO source called ' + source)
 
-    def _check_weather(self, city, date, info_required):
+    def _check_weather(self, city, date, forecast, info_required):
     	"""
         Checks the weather.
 
         It uses the source specified in self.__source. Sources can be extendable.
 
-        @param city: City to calculate weather. It updates self.__city.
+        @param city: City to calculate weather.
         @param date: Date for the weather.
         @param info_required: Type of info_required needed.
         """
-
-        # Update city
-        self.__city = city
 
         # Check weather
         if (self.__source == 'apixu'): # Apixu
             print('Chosen apixu')
             #### Make staff ####
-            if(self.__apixu._request(city) == True): # Make request and check if made
+            if(self.__apixu._request(city, forecast) == True): # Make request and check if made
                 self.__apixu._get_info(date, info_required) # Update the results variables
                 # Update results
                 self.__result = self.__apixu._return_result()

@@ -45,6 +45,7 @@ class TimeWeatherSkill(Skill):
     _feedback = time_weather_skill.msg.TimeWeatherFeedback()
     _result = time_weather_skill.msg.TimeWeatherResult()
 
+    _goal_max_size = 5 # Max size of the goal
 
     def __init__(self):
         """
@@ -62,9 +63,9 @@ class TimeWeatherSkill(Skill):
         self._time_var = Time() # Time object
         ## weather variables
         self._weather_var = Weather() # Weather object
-        self._date = "today"
-        self._info_required = "basic"
-        self._display = "000"
+        self._date = "" # "today"
+        self._info_required = "" # "basic"
+        self._display = "" # "000"
 
         # init the skill
         Skill.__init__(self, skill_name, NATURAL)
@@ -209,15 +210,16 @@ class TimeWeatherSkill(Skill):
         """
 
         print("----- Chosen weather -----")
-        if(len(goal_vec)>=4): # Check if all fields are completed
+        if(len(goal_vec) >= _goal_max_size-1): # Check if all fields are completed
 
             ############## Check weather ################
             self._city_name = goal_vec[1] # City name
             self._date = goal_vec[2] # Date
-            self._info_required = goal_vec[3] # Info wanted
+            self._forecast = goal_vec[3] # Forecast or current info
+            self._info_required = goal_vec[4] # Info wanted
 
             self._weather_var._update_source('apixu') # Choose a weather source
-            self._weather_var._check_weather(self._city_name, self._date, self._info_required) # Check weather in the specified city
+            self._weather_var._check_weather(self._city_name, self._date, self._forecast, self._info_required) # Check weather in the specified city
 
             # Empty the dictionary
             self._result_info_dic = {}
@@ -265,23 +267,26 @@ class TimeWeatherSkill(Skill):
                 goal_vec = goal.command.split("/") # Divides goal by fields
 
                 # Checks goal
-                if (goal_vec[0] == "time"): # Time
+                if (goal_vec[0] == "time"): # Time goal
                     #################### Time ######################
                     self.manage_time(goal_vec)
                     ################################################
 
-                elif (goal_vec[0] == "weather"): # Weather
+                elif (goal_vec[0] == "weather"): # Weather goal
                     ################### Weather ####################
                     weather = self.manage_weather(goal_vec)
-                    if(weather == True): # Check if weather has been requested
-                        if(len(goal_vec)>=5): # Check if the display field is completed
-                            self.manage_display(goal_vec[4])
+                    if(weather == False): # Check if weather has been requested
+                        print("==== Weather ERROR ====")
+                        self._result.result = -1 # Fail
+                    else:
+                        ################ Display ###################
+                        if(len(goal_vec) >= self._goal_max_size): # Check if the display field is completed
+                            self.manage_display(goal_vec[self._goal_max_size-1])
                         else:
                             print("Display not specified")
                             self._result.result = -1 # Fail
-                    else:
-                        print("==== Weather ERROR ====")
-                        self._result.result = -1 # Fail
+                        ############################################
+                        
                     ################################################
 
                 else: # Wrong goal
