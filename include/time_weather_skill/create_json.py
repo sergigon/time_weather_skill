@@ -21,12 +21,40 @@ pkg_name = "time_weather_skill"
 
 class CreateJson:
 
+	_data_path = rospack.get_path(pkg_name) + '/data/'
+
 	# Constructor	
-	def __init__(self):
+	def __init__(self, pkg_name = pkg_name):
 		"""
 		Init method.
 		"""
+
+
+	def ls(self, path = _data_path):
+		"""
+		Returns list of files in a given directory.
+		Tutorial: https://es.stackoverflow.com/questions/24278/c%C3%B3mo-listar-todos-los-archivos-de-una-carpeta-usando-python
+
+		@param path: Directory path.
+		"""
+		return [arch for arch in os.listdir(path) if os.path.isfile(os.path.join(path, arch))]
 	
+	def ls_json(self, path = _data_path):
+		"""
+		Returns list of json files in a given directory.
+
+		@param list_json: List of json files.
+		"""
+
+		list_files = self.ls(path)
+
+		list_json = []
+		for file in list_files:
+			if (file[-5:] == '.json'):
+				list_json.append(file)
+
+		return list_json
+
 	def file_exists(self, file_name):
 		"""
 		Checks if a file exists.
@@ -48,7 +76,7 @@ class CreateJson:
 		@return: Returns full path.
 		"""
 
-		return rospack.get_path(pkg_name) + "/data/" + file_name + ".json"
+		return self._data_path + file_name + ".json"
 
 	def write(self, data, file_name):
 		"""
@@ -64,10 +92,10 @@ class CreateJson:
 
 		# Write the data
 		with open(self.get_full_path(file_name), "w") as json_file:
-   			json.dump(data, json_file)
+			json.dump(data, json_file)
 
-   	def load(self, file_name):
-   		"""
+	def load(self, file_name):
+		"""
 		Loading method.
 
 		@params file_name: Name of the file, without extension
@@ -75,21 +103,29 @@ class CreateJson:
 		@return: Return JSON data if file found. If not, return -1
 		"""
 
-   		# Checks if the file exists
-   		if self.file_exists(file_name): # File found
-   			# Load the data
-   			data = json.loads(open(self.get_full_path(file_name)).read())
-   			return data
-   		else: # File not found
-   			print(self.get_full_path(file_name) + " file not found")
-   			return -1
+		# Checks if the file exists
+		if self.file_exists(file_name): # File found
+			# Load the data
+			data = json.loads(open(self.get_full_path(file_name)).read())
+			return data
+		else: # File not found
+			print(self.get_full_path(file_name) + " file not found")
+			return -1
 
 if __name__ == '__main__':
 	try:
 		print("[create_json]: __main__")
 		createJson = CreateJson()
 		#createJson.write()
-		data = createJson.load("data")
+		# Search files
+		print(createJson.ls())
+		print(createJson.ls('.'))
+		print(createJson.ls_json())
+		list_json = createJson.ls_json()
+		print('prueba_json.jon' in list_json)
+
+		# Load json file
+		data = createJson.load("file_name")
 		if(data != -1):
 			print(data['current']['last_updated'])
 

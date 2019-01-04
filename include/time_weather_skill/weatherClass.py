@@ -13,9 +13,11 @@ __status__ = "Development"
 
 import rospy
 import requests # URL requests
+import datetime # Gets actual date
 
 from time_weather_skill.create_json import CreateJson
 from time_weather_skill.weather_format_changer import source2standard
+from time_weather_skill.datetime_manager import DatetimeManager
 
 pkg_name = 'time_weather_skill'
 
@@ -25,7 +27,13 @@ class Weather():
     Weather class.
     """
 
-    _GOAL_MAX_SIZE = 5 # Max size of the goal
+    # Variables
+    _GOAL_MAX_SIZE = 5 # Max size of the weather goal
+    _WEATHER_FILENAME = 'weather' # Name of the file to store the weather data
+
+    # Lists
+    _SOURCE_LIST = ['apixu', 'source1', 'source2'] # List of the sources
+    _UPDATE_HOURS = [23, 19, 14, 9, 4] # List of hours for current request
 
     def __init__(self):
         """
@@ -33,31 +41,28 @@ class Weather():
         """
 
         # Weather sources
-        self._SOURCE_LIST = ['apixu', 'source1', 'source2'] # List of the sources
+        
         self._create_json = CreateJson() # CreateJson object
 
-    def _save_json(self, json_info, extra_dic):
+    def _save_json(self, input_dic, extra_dic={}):
         """
-        Save Json data in a Json file. It adds extra information.
+        Save weather dictionary in a Json file. It can be added
+        extra information.
 
         IMPORTANT: Json data must be in STANDARD format.
 
-        @param json_info: Weather dictionary in STANDARD format.
+        @param input_dic: Weather dictionary in STANDARD format.
         @param extra_dic: Dictionary with extra info to save.
         """
-        """
-        data_folder = '' # Folder to store the json files
-        file_name = 'es' + '_' + json_info['common']['city_name'] + '_' + json_info['common']['country_name']
 
-        # Separate the last updated date in various parts 
-        date_now = json_info['common']['last_updated'].split(" ") # Get date
-        year, month, day = date_now[0].split("-") # Separate date
-        """
         # Add extra info
-        json_info.update(extra_dic)
+        input_dic.update(extra_dic)
+
+        # Define filename
+        filename = self._WEATHER_FILENAME + '_' + input_dic['common']['city_name'].lower() + '_' +  input_dic['common']['country_name'].lower()
  
         # Write the data in the JSON file
-        self._create_json.write(json_info, 'prueba_json') # Write weather info into JSON file
+        self._create_json.write(input_dic, filename) # Write weather info into JSON file
 
     def _URL_request(self, url_forecast, params):
         """
@@ -84,9 +89,99 @@ class Weather():
             print('Connection ERROR')
             return -1, {}
 
+    def _local_request(self, city_name, country_name = ''):
+        """
+        Request local method. Search by the city and country names.
+
+        @param city_name: City to calculate weather.
+        @param country_name: Country to calculate weather.
+
+        @return result: Final result.
+        @return result_info_dic: Weather dictionary result.
+        """
+
+        # Initialize results
+        result = -1
+        result_info_dic = {}
+        found = False
+
+        # File to search (Format ex: 'weather_madrid_spain.json')
+        file_name = self._WEATHER_FILENAME
+        file_name = file_name + '_' + city_name.lower()
+        if (country_name != ''): # Country specified
+            file_name = file_name + '_' + country_name.lower()
+
+        # Search json files in the data folder
+        list_json = self._create_json.ls_json()
+
+        # Search file in the list
+        file_name_len = len(file_name)
+        for list_i in list_json:
+            if(file_name == list_i[:file_name_len]):
+                file_name = list_i[:-5] # Get filename without the '.json' string
+                # Check if JSON files exists
+                result_info_dic = self._create_json.load(file_name) # Load JSON file
+                found = True
+                break
+
+        if(found and result_info_dic != -1):
+            print('\'' + file_name + '\'' + ' file found')
+            result = 0
+        else:
+            result, result_info_dic = -1, {}
+            rospy.logwarn("Local request ERROR: File not found")
+
+        return result, result_info_dic
+        
+        '''
+        make_req = False # Indicate to fill the data
+        if (data_json != -1 and data_json_check != -1): # JSON files exists
+            # Check all parameters exist
+            #try:
+            # Check if 'city' and 'lang' coincide
+            if(location.lower() == data_json_check['city'].lower() and lang.lower() == data_json_check['lang'].lower()): # 'city' and 'lang' coincide
+                now = datetime.datetime.now() # Get current date
+                # Check if date is updated
+                if(data_json_check['day'] == str(now.day) and data_json_check['month'] == str(now.month) and data_json_check['year'] == str(now.year)): # Already updated
+                    print('Info in local found: "' + data_json_check['city'].lower() + '", "' + data_json_check['lang'].lower() + '"')
+                    # Current is selected
+                    if (forecast == 'current'):
+                        print('Checking if current weather is updated...')
+                        hour = -1 # Hour used to update
+                        for update_hour in self.update_hours: # Search the hour in the list
+                            hour = update_hour
+                            if(update_hour < now.hour): # When find the hour it stops
+                                break
+                        # Check if current weather is updated
+                        if(data_json_check['hour'] == str(hour)): # Already updated
+                            print('Current weather already updated')
+                            make_req = True
+                        else:
+                            print('Current weather NOT updated')
+                    else:
+                        print('hola')
+                        make_req = True
+                else:
+                    rospy.logwarn("Local request ERROR: File not updated")
+            else:
+                rospy.logwarn("Local request ERROR: 'city' or 'lang' do not coincide")
+            #except:
+            #   rospy.logwarn("Local request ERROR: Parameters not existing")
+        else:
+            rospy.logwarn("Local request ERROR: JSON files do not exist")
+
+        if(make_req):
+            self.__data = data_json # Get JSON data
+            print('Local request succeded')
+            return True
+        else:
+            print('Local request not available')
+            return False
+        '''
+
     def _get_weather(self, location, forecast_type, date, info_required):
         """
-        Get weather class.
+        Get weather from local or URL sources, and save it if it success.
 
         @param location: City to get weather. Format: 'Madrid' or 'Madrid, Spain'.
         @param forecast_type: 'forecast' or 'current'
@@ -97,23 +192,87 @@ class Weather():
         @return result_info_dic: Weather dictionary result.
         """
 
-        # Initialize reulsts
+        # Initialize results
         result, result_info_dic = -1, {}
+        # Initialize variables
         lang = 'es'
+        updated = False # Variable to update local info
 
-        ############### Checks if it is in local #################
+        ################ Checks if it is in local ################
+        # ############# Get city and country names ############# #
+        city_name, country_name = '', ''
+        # Checks if location has specified country
+        n_commas = location.find(',')
+        if(n_commas <= 0): # NOT specified country
+            city_name = location
+        else: # Specified country
+            city_name, country_name = loaction.split(",")
+            if(country_name[0] == ' '): # Removes space character if necessary
+                country_name = country_name[1:]
+
+        # ################# Make local request ################# #
+        print("Making local request: " + city_name + ", " + country_name)
+        result, result_info_dic = self._local_request(city_name, country_name)
+
+        # ########### Check if local data is updated ########### #
+        if(result == 0):
+            # Manage last_update variable
+            last_update = DatetimeManager(result_info_dic[forecast_type]['last_updated'])
+            print('Last update (' + forecast_type + '): ' + last_update.date())
+            # Current datatime
+            now = datetime.datetime.now() # Get current date
+            print('Local date: ' + str(now.year) + '-' + str(now.month) + '-' + str(now.day))
+            if(now.year == last_update.year() and now.month == last_update.month() and now.day == last_update.day()): # Date updated
+                print('Date is updated')
+                if(forecast_type == 'forecast'):
+                    pass
+
+                if(forecast_type == 'current'):
+                    pass
+            else: # Date NOT updated
+                rospy.logwarn("Local request ERROR: File not updated")
+
+            return result, result_info_dic
+
+            
+        
+
         '''
         if True:
-            return 0, result_info_dic
+            read local
+            check if it is updated
+            if(forecast_type == 'forecast'):
+                check if forecast is updated
+            elif(forecast_type == 'current'):
+                check if current is updated
+        
+            if(updated == True):
+                return 0, result_info_dic
+            else:
+                print(forecast_type + ' not updated')
+        # else:
+            print('Info not found in local')
+
         '''
 
+
         ################## Make URL requests #####################
-        # >> Each source must get the FORECAST and CURRENT json <<
-        # >> info and SAVE it in the 'result_info_dic' variable <<
         for source in self._SOURCE_LIST: # Selects the source from the source list
             print("Making URL request to: '" + source + "'")
-            ####### Apixu source #######
+
+            ################# CHANGE CODE HERE ###################
+            # >> Each source must get the FORECAST and        << #
+            # >> CURRENT json info and SAVE it in the         << #
+            # >> variable 'result_info_dic'                   << #
+            # \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ #
+
+            ########### Apixu source ###########
             if(source == 'apixu'):
+                ################### NOTES ###################
+                # It only make ONE request, since           #
+                # forecast requests gives also current info #
+                #############################################
+
                 # Params
                 url_forecast = 'http://api.apixu.com/v1/forecast.json'
                 params = {
@@ -125,20 +284,26 @@ class Weather():
                 # Request
                 result, result_info_dic = self._URL_request(url_forecast, params)
 
-            ####### Source 2 #######
+            ########### Source 2 ###########
             elif(source == 'source2'):
                 #Params
                 #Request
                 pass
 
+            # /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ #
+            ######################################################
+
             ####### Request success #######
             if(result == 0): # URL request success
-                result_info_dic = source2standard(source, result_info_dic) # Change weather format to standard format
-                extra_dic = { # Saves extra info in the file
+                # Change weather format to standard format
+                result_info_dic = source2standard(source, result_info_dic)
+                # Saves extra info in the file
+                extra_dic = {
                     'lang': lang
                 }
-                self._save_json(result_info_dic, extra_dic) # Saves the content in a local file
-                break # Stops the URL requests list
+                # Saves the content in a local file
+                self._save_json(result_info_dic)
+                break # Stops the URL requests list loop
 
 
         return result, result_info_dic
@@ -177,9 +342,10 @@ class Weather():
 if __name__ == '__main__':
     try:
     	print("[" + pkg_name + "] __main__")
-
+        rospy.init_node('my_node', log_level=rospy.DEBUG)
         weather = Weather()
-        print weather._manage_weather(['madrid', 'forecast', '0', 'date'])
+        result, result_info = weather._manage_weather(['madrid', 'forecast', '0', 'date'])
+        print(result_info)
 
     except rospy.ROSInterruptException:
         pass

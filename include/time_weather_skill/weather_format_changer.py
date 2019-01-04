@@ -35,6 +35,7 @@ def source2standard(source, weather_dic):
 	
 
 	################# CHANGE CODE HERE ###################
+	# \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ #
 
 	########### Apixu ###########
 	if(source == 'apixu'):
@@ -68,6 +69,7 @@ def source2standard(source, weather_dic):
 		# Common parameters
 		pass
 
+	# /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ #
 	######################################################
 
 
@@ -130,7 +132,7 @@ def source2standard(source, weather_dic):
 if __name__ == '__main__':
 
 	# Functioning example
-	dic = {
+	apixu_dic = {
 		u'current': {
 			u'precip_mm': 0.2,
 			u'last_updated': u'2018-11-08 17:45',
@@ -388,5 +390,5 @@ if __name__ == '__main__':
 			}
 		]}
 	}
-	result_info = source2standard('apixu', dic)
+	result_info = source2standard('apixu', apixu_dic)
 	print(result_info)

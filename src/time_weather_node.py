@@ -45,7 +45,7 @@ class TimeWeatherSkill(Skill):
     _feedback = time_weather_skill.msg.TimeWeatherFeedback()
     _result = time_weather_skill.msg.TimeWeatherResult()
 
-    _goal_max_size = 5 # Max size of the goal
+    _GOAL_MAX_SIZE = 5 # Max size of the goal
 
     def __init__(self):
         """
@@ -62,7 +62,7 @@ class TimeWeatherSkill(Skill):
         ## time variables
         self._time_var = Time() # Time object
         ## weather variables
-        self._weather_var = Weather() # Weather object
+        self._weather = Weather() # Weather object
         self._date = "" # "today"
         self._info_required = "" # "basic"
         self._display = "" # "000"
@@ -199,33 +199,35 @@ class TimeWeatherSkill(Skill):
             rospy.sleep(1)
         #############################################
 
-    def manage_weather(self, goal_vec):
+    def _manage_weather(self, goal_vec):
         """
         Manager of the weather class. It updates the result and result_info.
         Examples:
-        weather/Madrid/today/basic/101
-        time/Madrid
+        madrid/forecast/tomorrow/basic/101
+        sydney/current/0/is_day/011
 
         @param goal_vec: Vector of the goal.
+
+        @return result: Final result.
+        @return result_info_dic: Weather dictionary result.
         """
 
-        print("----- Chosen weather -----")
-        if(len(goal_vec) >= _goal_max_size-1): # Check if all fields are completed
+        if(len(goal_vec) >= self._GOAL_MAX_SIZE-1): # Check if all min fields are completed
 
             ############## Check weather ################
             self._city_name = goal_vec[1] # City name
-            self._date = goal_vec[2] # Date
-            self._forecast = goal_vec[3] # Forecast or current info
+            self._forecast = goal_vec[2] # Forecast or current info
+            self._date = goal_vec[3] # Date
             self._info_required = goal_vec[4] # Info wanted
-
-            self._weather_var._update_source('apixu') # Choose a weather source
-            self._weather_var._check_weather(self._city_name, self._date, self._forecast, self._info_required) # Check weather in the specified city
+            
+            self._weather._update_source('apixu') # Choose a weather source
+            self._weather._check_weather(self._city_name, self._forecast, self._info_required, self._date) # Check weather in the specified city
 
             # Empty the dictionary
             self._result_info_dic = {}
             # Fill result_dic and result
-            self._result.result = self._weather_var._return_result() # Get result
-            self._result_info_dic = self._weather_var._return_info() # Result_info = weather info
+            self._result.result = self._weather._return_result() # Get result
+            self._result_info_dic = self._weather._return_info() # Result_info = weather info
             #############################################
             if(self._result.result == -1):
                 return False
@@ -236,7 +238,7 @@ class TimeWeatherSkill(Skill):
             print("Goal size not completed")
             self._result.result = -1 # Fail
             self._result_info_dic = {}
-            return False
+            return -1, {}
 
     def execute_cb(self, goal):
         """
@@ -247,7 +249,7 @@ class TimeWeatherSkill(Skill):
 
         # default values (In progress)
         self._result.result = -1 # Error
-        #self._result.result_info = None # Empty
+        self._result.result_info = [] # Empty
         self._feedback.feedback = 0
 
         ############### Si la skill esta activa: ###################
@@ -267,31 +269,22 @@ class TimeWeatherSkill(Skill):
                 goal_vec = goal.command.split("/") # Divides goal by fields
 
                 # Checks goal
-                if (goal_vec[0] == "time"): # Time goal
-                    #################### Time ######################
-                    self.manage_time(goal_vec)
-                    ################################################
-
-                elif (goal_vec[0] == "weather"): # Weather goal
-                    ################### Weather ####################
-                    weather = self.manage_weather(goal_vec)
-                    if(weather == False): # Check if weather has been requested
-                        print("==== Weather ERROR ====")
-                        self._result.result = -1 # Fail
-                    else:
-                        ################ Display ###################
-                        if(len(goal_vec) >= self._goal_max_size): # Check if the display field is completed
-                            self.manage_display(goal_vec[self._goal_max_size-1])
-                        else:
-                            print("Display not specified")
-                            self._result.result = -1 # Fail
-                        ############################################
-                        
-                    ################################################
-
-                else: # Wrong goal
-                    print("Goal not correct")
+                ################### Weather ####################
+                weather = self._manage_weather(goal_vec)
+                if(weather == False): # Check if weather has been requested
+                    print("==== Weather ERROR ====")
                     self._result.result = -1 # Fail
+                else:
+                    ################ Display ###################
+                    if(len(goal_vec) >= self._GOAL_MAX_SIZE): # Check if the display field is completed
+                        self.manage_display(goal_vec[self._GOAL_MAX_SIZE-1])
+                    else:
+                        print("Display not specified")
+                        self._result.result = -1 # Fail
+                    ############################################
+                    
+                ################################################
+
                 #==================================================#
             
             ######### Si se ha hecho un preempted o cancel: ########
