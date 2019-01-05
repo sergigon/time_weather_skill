@@ -34,6 +34,12 @@ class Weather():
     # Lists
     _SOURCE_LIST = ['apixu', 'source1', 'source2'] # List of the sources
     _UPDATE_HOURS = [23, 19, 14, 9, 4] # List of hours for current request
+    _INFO_BASIC_LIST_CURRENT = ['date', 'temp_c', 'is_day', 'text', 'code', 'city_name', 'country_name', 'last_updated'] # Basic current list
+    _INFO_BASIC_LIST_FORECAST = ['date', 'avgtemp_c', 'text', 'code', 'city_name', 'country_name', 'last_updated'] # Basic advanced list
+    _INFO_ADVANCED_LIST_CURRENT = _INFO_BASIC_LIST_CURRENT[:]
+    _INFO_ADVANCED_LIST_FORECAST = _INFO_BASIC_LIST_FORECAST[:]
+    _INFO_ADVANCED_LIST_CURRENT.extend(['precip_mm']) # Advanced current list
+    _INFO_ADVANCED_LIST_FORECAST.extend(['mintemp_c', 'maxtemp_c', 'totalprecip_mm']) # Advanced forecast list
 
     def __init__(self):
         """
@@ -179,6 +185,80 @@ class Weather():
             return False
         '''
 
+    def _fix_date(self, date):
+        """
+        Fix the date and converts to int.
+
+        @param date: date to fix.
+        """
+
+        if (date == 'today'):
+            date = '0'
+        elif (date == 'tomorrow'):
+            date = '1'
+
+        date = int(date) # Converts to int
+
+        return date
+
+    def _get_info(self, forecast_type, date, info_required, standard_weather_dic):
+        """
+        Get info method.
+
+        @param forecast_type: 'forecast' or 'current'
+        @param date: Date for the weather.
+        @param info_required: Type of info_required needed.
+        @param standard_weather_dic: Standard input weather dictionary.
+
+        @return result: Final result.
+        @return result_info_dic: Weather dictionary result.
+        """
+
+        # Reset result info
+        result, result_info_dic = -1, {}
+
+        # Converts to int the date for the result_info dictionary
+        date = self._fix_date(date)
+
+        # Prepare info_required list
+        info_required = info_required.replace(' ','') # Remove spaces from the string
+        info_required_list = info_required.split(",") # Separate the goal in various parts
+
+        if('advanced' in info_required_list): # Check if advanced list is requested
+            if(forecast_type == 'current'):
+                info_required_list = self._INFO_ADVANCED_LIST_CURRENT[:] # Replace the list with the advanced list
+            if(forecast_type == 'forecast'):
+                info_required_list = self._INFO_ADVANCED_LIST_FORECAST[:] # Replace the list with the advanced list
+
+        if('basic' in info_required_list): # Check if basic list is requested
+            if(forecast_type == 'current'):
+                info_required_list = self._INFO_BASIC_LIST_CURRENT[:] # Replace the list with the basic list
+            if(forecast_type == 'forecast'):
+                info_required_list = self._INFO_BASIC_LIST_FORECAST[:] # Replace the list with the basic list
+        
+
+        # Fill the the result_info_dic
+        for info_required_i in info_required_list: # Search in the info required list
+            print info_required_i
+            # Checks if info required exists in forecast_type list
+            if info_required_i in standard_weather_dic[forecast_type]:
+                result_info_dic.update({info_required_i: standard_weather_dic[forecast_type][info_required_i]})
+            # Checks if info required exists in 'forecast'/'forecastday' list
+            if forecast_type == 'forecast':
+                if info_required_i in standard_weather_dic[forecast_type]['forecastday'][date]:
+                    result_info_dic.update({info_required_i: standard_weather_dic[forecast_type]['forecastday'][date][info_required_i]})
+            # Checks if info required exists in 'common' list
+            if 'common' in standard_weather_dic:
+                if info_required_i in standard_weather_dic['common']:
+                    result_info_dic.update({info_required_i: standard_weather_dic['common'][info_required_i]})
+
+        #result_info_dic.update({forecast_type: aux_dic_forecast_type})
+        #result_info_dic.update({'common': aux_dic_common})
+
+        result = 0
+
+        return result, result_info_dic
+
     def _get_weather(self, location, forecast_type, date, info_required):
         """
         Get weather from local or URL sources, and save it if it success.
@@ -232,7 +312,9 @@ class Weather():
             else: # Date NOT updated
                 rospy.logwarn("Local request ERROR: File not updated")
 
-            return result, result_info_dic
+            result_info_dic1 = self._get_info(forecast_type, date, info_required, result_info_dic)
+
+            return result, result_info_dic1
 
             
         
@@ -344,7 +426,7 @@ if __name__ == '__main__':
     	print("[" + pkg_name + "] __main__")
         rospy.init_node('my_node', log_level=rospy.DEBUG)
         weather = Weather()
-        result, result_info = weather._manage_weather(['madrid', 'forecast', '0', 'date'])
+        result, result_info = weather._manage_weather(['madrid', 'current', '1', 'advanced'])
         print(result_info)
 
     except rospy.ROSInterruptException:

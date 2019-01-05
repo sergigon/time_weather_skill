@@ -28,7 +28,7 @@ Explain in detail how to run the system: nodes, launch files, etc.
 
 ## Goal
 ### Goal structure
-`'Type_of_information/city/day/forecast/information_required/display'`
+`'Type_of_information/city/forecast_type/information_required/day/display'`
 
 Examples:
 + `'weather/madrid/2/basic/101'`
@@ -40,6 +40,11 @@ Posible inputs:
 + **weather**: Displays the weather and return info
 + **time**: Return the actual state time (day or night)
 + **comment**: Return a joke
+
+### Forecast Type
++ **current**: Returns the current weather.
+Apixu act.: 13:45 (13:56), 17:45 (18:00), 19:45 (19:52), 20:00 (20:23), 20:15 (20:27), 20:30 (20:47), 21:00 (3:47)
++ **forecast**: Returns the forecast.
 
 ### City
 City where to check the time/weather.
@@ -74,25 +79,34 @@ Example: **`'last_update,temp_c'`**
 You can get directly a list, writting `'basic'` or `'advanced'` instead.
 
 The list of possible inputs are the following:
-+ `'last_updated'`: Last update forecast date
-+ `'city_name'`: Name of the city
-+ `'country_name'`: Name of the country
-+ `'date'`: Current date
-+ `'text'`: Weather condition (Example:'Partially cloud')
-+ `'code'`: Code number for icons, it depends on the ´text´
-Only for current:
-+ `'temp_c'`: Temperature in celsius degrees
-+ `'is_day'`: Day or night
-+ `'precip_mm'`: Precipitation amount in millimeters
-Only for forecast:
-+ `'avgtemp_c'`: Average temperature in celsius degrees
-+ `'mintemp_c'`: Minimum temperature in celsius
-+ `'maxtemp_c'`: Maximum temperature in celsius for the day
-+ `'totalprecip_mm'`: Total precipitation in milimeters
 
+Current parameters:
++ `'date'`: Current date ('2018-11-08')
++ `'temp_c'`: Temperature in celsius degrees (51.8)
++ `'is_day'`: Day or night (1 or 0)
++ `'precip_mm'`: Precipitation amount in millimeters (0.2)
++ `'text'`: Weather condition ('Partially cloud')
++ `'code'`: Code number for icons, it depends on the ´text´ (1003)
++ `'last_updated'`: Last update forecast date ('2018-11-08 17:45')
+
+Forecast parameters:
++ `'date'`: Forecast date ('2018-11-08')
++ `'avgtemp_c'`: Average temperature in celsius degrees (10.7)
++ `'mintemp_c'`: Minimum temperature in celsius (8.3)
++ `'maxtemp_c'`: Maximum temperature in celsius for the day (12.9)
++ `'totalprecip_mm'`: Total precipitation in milimeters (0.04)
++ `'text'`: Weather condition ('Light rain shower')
++ `'code'`: Code number for icons, it depends on the ´text´ (1240)
++ `'last_updated'`: Last update forecast date ('2018-11-08 17:45')
+
+Common parameters:
++ `'city_name'`: Name of the city ('Madrid')
++ `'country_name'`: Name of the country ('Spain')
+
+Lists:
 + `'basic'`: Basic info. It includes the following data:
-  + Current: `'last_updated'`, `'city_name'`, `'country_name'`, `'date'`, `'temp_c'`, `'text'`, `'code'`, `'is_day'`
-  + Forecast: `'last_updated'`, `'city_name'`, `'country_name'`, `'date'`, `'avgtemp_c'`, `'text'`, `'code'`
+  + Current: `'date'`, `'temp_c'`, `'is_day'`, `'text'`, `'code'`, `'city_name'`, `'country_name'`, `'last_updated'`
+  + Forecast: `'date'`, `'avgtemp_c'`, `'text'`, `'code'`, `'city_name'`, `'country_name'`, `'last_updated'`
 + `'advanced'`: Advanced info. It includes the following data:
   + Current: `Basic list`, `'precip_mm'`
   + Forecast: `Basic list`, `'mintemp_c'`, `'maxtemp_c'`, `'totalprecip_mm'`
