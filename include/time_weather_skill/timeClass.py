@@ -10,108 +10,110 @@ __maintainer__ = "Marcos Maroto Gomez"
 __email__ = "marmarot@ing.uc3m.es"
 __status__ = "Development"
 
-import math
 import rospy
 import datetime
 
 from astral import Astral
 
-from std_msgs.msg import String
-
 pkg_name = 'time_weather_skill'
-city_name_def = 'Madrid' # Ciudad por defecto
 
-class Time():
+class TimeAstral():
 
     """
-    Time class.
+    Time class that uses Astral class info.
     """
 
-    def __init__(self): # Si no se especifica, se usa ciudad por defecto
+    def __init__(self):
         """
         Init method.
         """
 
-        # class variables    
-        self.__result = -1 # Result
-        self.__result_info = {} # Info
-        self.__city_name = ''
 
-        # Astral variables
-        self.__astral = Astral() # Astral object
-        self.__astral.solar_depression = 'civil'
-        self.__city = None
-        self.__timezone = None
-        
+    def _update_city_params(self, city_name):
+        """
+        Update the city parameters.
 
-    def __update_city_params(self, city):
-    	"""
-    	Update the parameters with the new city.
+        @param location: City to update. Format: 'Madrid' or 'Madrid, Spain'. ?????????????
 
-    	@param city: New city.
-    	"""
-    	self.__city_name = city
-        
-        try:
-            self.__city = self.__astral[self.__city_name]
-            self.__timezone = self.__city.timezone
-            self.__result = 0 # Success
-        except:
-            print("City not available")
-            self.__result = -1 # Errors
-
-
-    def _check_time(self, city):
-    	"""
-        Checks if it is day or night.
-        If not specified, it uses the last city used.
-
-        Change the variable self.__result_info ('day' or 'night').
-
-        @param city: City to calculate time. It updates self.__city.
+        @return city: City object.
+        @return timezone: Timezone object.
         """
 
-        # Reset
-        self.__result_info = {}
+        astral = Astral() # Astral object
 
         # Update city parameters
-        self.__update_city_params(city)
+        try:
+            city = astral[city_name]
+            timezone = city.timezone
+        except:
+            rospy.logwarn("TimeAstral ERROR: City not available")
+            city = -1 # Error
+            timezone = -1
+
+        return city, timezone
+        
+
+    def _is_day(self, city_name):
+    	"""
+        Checks if it is day or night.
+
+        @param city_name: City to calculate if it is day or night. Format: 'Madrid'
+
+        @return result: Final result.
+        @return result_info: Info result.
+        """
+
+        # Initialize results
+        result, result_info = -1, ''
+
+        # Update city parameters
+        city, timezone = self._update_city_params(city_name)
 
         # Check time
-        if(self.__result == 0): # If result is success, searchs for state
-            sun = self.__city.sun(date=datetime.date.today(), local=False)
-
+        if(city != -1):
+            sun = city.sun(date=datetime.date.today(), local=False)
             if sun['dawn'].replace(tzinfo=None) < datetime.datetime.now() < sun['dusk'].replace(tzinfo=None):
-                self.__result_info = {'is_day': 1, 'city_name': self.__city_name}
+                result_info = 1
             else:
-                self.__result_info = {'is_day': 0, 'city_name': self.__city_name}
-        else: # Error
-            self.__result_info = {'is_day': -1, 'city_name': self.__city_name}
+                result_info = 0
+            result = 0
 
-    def _return_info(self):
+        else:
+            result, result_info = -1, ''
+
+        return result, result_info
+
+    def get_info(self, city_name, info_required):
         """
-        Return info
+        Get the info specified.
+
+        @param city_name: City to get info. Format: 'Madrid'
+        @param info_required: Type of info_required needed.
+
+        @return result: Final result.
+        @return result_info: Info result.
         """
-        return self.__result_info
-        
-    def _return_result(self):
-        """
-        Return result
-        """
-        return self.__result
+
+        # Initialize results
+        result, result_info = -1, ''
+
+        # Info list
+        if(info_required == 'is_day'):
+            result, result_info = self._is_day(city_name)
+
+        return result, result_info
+
 
 if __name__ == '__main__':
     try:
     	print("[" + pkg_name + "]: __main__")
 
-        time_var = Time()
+        time_var = TimeAstral()
         
-        time_var._check_time('Paris') # Check time
-        result = time_var._return_result() # Get result
-        info = time_var._return_info() + "/" + 'Paris' # Result_info = time/city
+        result, result_info = time_var.get_info('Madrid', 'is_day') # Check day
 
         print(result)
-        print(info)
+        print(result_info)
         
 
     except rospy.ROSInterruptException:

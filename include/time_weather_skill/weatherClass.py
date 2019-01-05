@@ -18,6 +18,7 @@ import datetime # Gets actual date
 from time_weather_skill.create_json import CreateJson
 from time_weather_skill.weather_format_changer import source2standard
 from time_weather_skill.datetime_manager import DatetimeManager
+from time_weather_skill.timeClass import TimeAstral
 
 pkg_name = 'time_weather_skill'
 
@@ -40,6 +41,7 @@ class Weather():
     _INFO_ADVANCED_LIST_FORECAST = _INFO_BASIC_LIST_FORECAST[:]
     _INFO_ADVANCED_LIST_CURRENT.extend(['precip_mm']) # Advanced current list
     _INFO_ADVANCED_LIST_FORECAST.extend(['mintemp_c', 'maxtemp_c', 'totalprecip_mm']) # Advanced forecast list
+    _TIMECLASS_LIST = ['is_day'] # List of the TimeClass parameters
 
     def __init__(self):
         """
@@ -69,6 +71,46 @@ class Weather():
  
         # Write the data in the JSON file
         self._create_json.write(input_dic, filename) # Write weather info into JSON file
+
+    def _location(self, location):
+        """
+        Divide the location in city_name and country_name.
+
+        @param location: City to get weather. Format: 'Madrid' or 'Madrid, Spain'.
+
+        @return city_name: Name of the city.
+        @return country_name: Name of the country.
+        """
+
+        # Initialize variables
+        city_name, country_name = '', ''
+
+        # Checks if location has specified country
+        n_commas = location.find(',')
+        if(n_commas <= 0): # NOT specified country
+            city_name = location
+        else: # Specified country
+            city_name, country_name = location.split(",")
+            if(country_name[0] == ' '): # Removes space character if necessary
+                country_name = country_name[1:]
+
+        return city_name, country_name
+
+    def _fix_date(self, date):
+        """
+        Fix the date and converts to int.
+
+        @param date: date to fix.
+        """
+
+        if (date == 'today'):
+            date = '0'
+        elif (date == 'tomorrow'):
+            date = '1'
+
+        date = int(date) # Converts to int
+
+        return date
 
     def _URL_request(self, url_forecast, params):
         """
@@ -185,37 +227,24 @@ class Weather():
             return False
         '''
 
-    def _fix_date(self, date):
+
+    def _get_info(self, location, forecast_type, date, info_required):
         """
-        Fix the date and converts to int.
+        Get the info specified. It uses local methods or make requests to that end.
 
-        @param date: date to fix.
-        """
-
-        if (date == 'today'):
-            date = '0'
-        elif (date == 'tomorrow'):
-            date = '1'
-
-        date = int(date) # Converts to int
-
-        return date
-
-    def _get_info(self, forecast_type, date, info_required, standard_weather_dic):
-        """
-        Get info method.
-
+        @param location: City to get weather. Format: 'Madrid' or 'Madrid, Spain'.
         @param forecast_type: 'forecast' or 'current'
         @param date: Date for the weather.
         @param info_required: Type of info_required needed.
-        @param standard_weather_dic: Standard input weather dictionary.
 
         @return result: Final result.
         @return result_info_dic: Weather dictionary result.
         """
 
-        # Reset result info
+        # Initialize result
         result, result_info_dic = -1, {}
+        # Initialize variables
+        standard_weather_dic = {}
 
         # Converts to int the date for the result_info dictionary
         date = self._fix_date(date)
@@ -235,31 +264,51 @@ class Weather():
                 info_required_list = self._INFO_BASIC_LIST_CURRENT[:] # Replace the list with the basic list
             if(forecast_type == 'forecast'):
                 info_required_list = self._INFO_BASIC_LIST_FORECAST[:] # Replace the list with the basic list
-        
 
-        # Fill the the result_info_dic
-        for info_required_i in info_required_list: # Search in the info required list
-            print info_required_i
-            # Checks if info required exists in forecast_type list
-            if info_required_i in standard_weather_dic[forecast_type]:
-                result_info_dic.update({info_required_i: standard_weather_dic[forecast_type][info_required_i]})
-            # Checks if info required exists in 'forecast'/'forecastday' list
-            if forecast_type == 'forecast':
-                if info_required_i in standard_weather_dic[forecast_type]['forecastday'][date]:
-                    result_info_dic.update({info_required_i: standard_weather_dic[forecast_type]['forecastday'][date][info_required_i]})
-            # Checks if info required exists in 'common' list
-            if 'common' in standard_weather_dic:
-                if info_required_i in standard_weather_dic['common']:
-                    result_info_dic.update({info_required_i: standard_weather_dic['common'][info_required_i]})
 
-        #result_info_dic.update({forecast_type: aux_dic_forecast_type})
-        #result_info_dic.update({'common': aux_dic_common})
+        ############### Fill the result_info dictionary ###############
+        request = False # Indicates if a request has been done
 
+        # Search in the info required list
+        for info_required_i in info_required_list:
+            found = -1
+            # ############## Take data from TimeAstral ############## #
+            if(forecast_type == 'current' and info_required_i in self._TIMECLASS_LIST): # This info can be taken with TimeClass
+                city_name, _ = self._location(location) # # Get the city name form location variable
+                print('Searching \'' + info_required_i + '\' in TimeAstral: ' + city_name)
+                time_var = TimeAstral()
+                found, data_time = time_var.get_info(city_name, info_required_i) # Get TimeAstral info
+                if(found != -1):
+                    result_info_dic.update({info_required_i: data_time})
+                else:
+                    rospy.logwarn("TimeAstral ERROR: Data not found")
+
+            # ######## Take data from local or URL requests ######### #
+            if(found == -1): # Parameter not found with other source
+                # Make only ONE request
+                if(not request): # A request has not been done
+                    result, standard_weather_dic = self._request_weather(location, forecast_type, date, info_required) # Get the weather info
+                    request = True
+                    if(result == -1): # If there is a request error, it gets out
+                        return result, {}
+                
+                # Checks if info required exists in forecast_type list
+                if info_required_i in standard_weather_dic[forecast_type]:
+                    result_info_dic.update({info_required_i: standard_weather_dic[forecast_type][info_required_i]})
+                # Checks if info required exists in 'forecast'/'forecastday' list
+                if forecast_type == 'forecast':
+                    if info_required_i in standard_weather_dic[forecast_type]['forecastday'][date]:
+                        result_info_dic.update({info_required_i: standard_weather_dic[forecast_type]['forecastday'][date][info_required_i]})
+                # Checks if info required exists in 'common' list
+                if 'common' in standard_weather_dic:
+                    if info_required_i in standard_weather_dic['common']:
+                        result_info_dic.update({info_required_i: standard_weather_dic['common'][info_required_i]})
+            print(result_info_dic)
         result = 0
 
         return result, result_info_dic
 
-    def _get_weather(self, location, forecast_type, date, info_required):
+    def _request_weather(self, location, forecast_type, date, info_required):
         """
         Get weather from local or URL sources, and save it if it success.
 
@@ -280,15 +329,7 @@ class Weather():
 
         ################ Checks if it is in local ################
         # ############# Get city and country names ############# #
-        city_name, country_name = '', ''
-        # Checks if location has specified country
-        n_commas = location.find(',')
-        if(n_commas <= 0): # NOT specified country
-            city_name = location
-        else: # Specified country
-            city_name, country_name = loaction.split(",")
-            if(country_name[0] == ' '): # Removes space character if necessary
-                country_name = country_name[1:]
+        city_name, country_name = self._location(location)
 
         # ################# Make local request ################# #
         print("Making local request: " + city_name + ", " + country_name)
@@ -312,9 +353,7 @@ class Weather():
             else: # Date NOT updated
                 rospy.logwarn("Local request ERROR: File not updated")
 
-            result_info_dic1 = self._get_info(forecast_type, date, info_required, result_info_dic)
-
-            return result, result_info_dic1
+            return result, result_info_dic
 
             
         
@@ -390,7 +429,7 @@ class Weather():
 
         return result, result_info_dic
 
-    def _manage_weather(self, goal_vec):
+    def manage_weather(self, goal_vec):
         """
         Manager of the weather class. It updates the result and result_info.
         Examples:
@@ -411,7 +450,8 @@ class Weather():
             date = goal_vec[2] # Date
             info_required = goal_vec[3] # Info wanted
 
-            result, result_info_dic = self._get_weather(location, forecast_type, date, info_required) # Get the weather info
+            result, result_info_dic = self._get_info(location, forecast_type, date, info_required)
+            
             return result, result_info_dic
 
         else:
@@ -426,8 +466,9 @@ if __name__ == '__main__':
     	print("[" + pkg_name + "] __main__")
         rospy.init_node('my_node', log_level=rospy.DEBUG)
         weather = Weather()
-        result, result_info = weather._manage_weather(['madrid', 'current', '1', 'advanced'])
+        result, result_info = weather.manage_weather(['Madrid', 'current', '1', 'basic'])
         print(result_info)
+
 
     except rospy.ROSInterruptException:
         pass
