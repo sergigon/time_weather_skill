@@ -11,7 +11,7 @@ __email__ = "sergigon@ing.uc3m.es"
 __status__ = "Development"
 
 
-def source2standard(source, weather_dic):
+def source2standard(source, forecast_type, weather_dic):
 	"""
 	Changes the weather dictionary format into the STANDARD format.
 
@@ -21,8 +21,15 @@ def source2standard(source, weather_dic):
 	@return standard_weather_dic: Standard output weather dictionary.
 	"""
 
-	# Initialize some variables
+	# Initialize variables
+	# Current: (Not neccesary)
+	c_date, c_temp_c, c_is_day, c_precip_mm, c_text, c_code, c_last_updated = '', '', '', '', '', '', ''
+	# Forecast: (Not neccesary)
+	f_last_updated, f_forecast_days = '', ''
 	f_date, f_avgtemp_c, f_mintemp_c, f_maxtemp_c, f_totalprecip_mm, f_text, f_code = [], [], [], [], [], [], []
+	# Common:
+	city_name, country_name = '', ''
+
 
 	###########################################################
 	############## HOW TO IMPLEMNT NEW SOURCE #################
@@ -32,13 +39,19 @@ def source2standard(source, weather_dic):
 	# IMPORTANT: If needed, change the content of the         #
 	# variable to fit the correct format.                     #
 	###########################################################
-	
 
 	################# CHANGE CODE HERE ###################
 	# \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ #
 
 	########### Apixu ###########
 	if(source == 'apixu'):
+		######### Change forecast type name #########
+		# As apixu requests give 'current' and      #
+		# 'forecast' at same time, we save both     #
+		# info in the standard_weather_dic variable #
+		forecast_type = 'all'
+		#############################################
+
 		# Current weather
 		c_date = weather_dic['forecast']['forecastday'][0]['date']
 		c_temp_c = weather_dic['current']['temp_c']
@@ -47,6 +60,7 @@ def source2standard(source, weather_dic):
 		c_text = weather_dic['current']['condition']['text']
 		c_code = weather_dic['current']['condition']['code']
 		c_last_updated = weather_dic['current']['last_updated']
+
 		# Forecast weather
 		for forecastday in weather_dic['forecast']['forecastday']:
 			f_date.append(forecastday['date'])
@@ -58,6 +72,7 @@ def source2standard(source, weather_dic):
 			f_code.append(forecastday['day']['condition']['code'])
 		f_last_updated = weather_dic['current']['last_updated']
 		f_forecast_days = len(weather_dic['forecast']['forecastday'])
+
 		# Common parameters
 		city_name = weather_dic['location']['name']
 		country_name = weather_dic['location']['country']
@@ -65,8 +80,37 @@ def source2standard(source, weather_dic):
 	########### Source2 ###########
 	elif(source == 'source2'):
 		# Current weather
+		if(forecast_type == 'current'):
+			'''
+			c_date = weather_dic['forecast']['forecastday'][0]['date']
+			c_temp_c = weather_dic['current']['temp_c']
+			c_is_day = weather_dic['current']['is_day']
+			c_precip_mm = weather_dic['current']['precip_mm']
+			c_text = weather_dic['current']['condition']['text']
+			c_code = weather_dic['current']['condition']['code']
+			c_last_updated = weather_dic['current']['last_updated']
+			'''
+			pass
 		# Forecast weather
+		if(forecast_type == 'forecast'):
+			'''
+			for forecastday in weather_dic['forecast']['forecastday']:
+				f_date.append(forecastday['date'])
+				f_avgtemp_c.append(forecastday['day']['avgtemp_c'])
+				f_mintemp_c.append(forecastday['day']['mintemp_c'])
+				f_maxtemp_c.append(forecastday['day']['maxtemp_c'])
+				f_totalprecip_mm.append(forecastday['day']['totalprecip_mm'])
+				f_text.append(forecastday['day']['condition']['text'])
+				f_code.append(forecastday['day']['condition']['code'])
+			f_last_updated = weather_dic['current']['last_updated']
+			f_forecast_days = len(weather_dic['forecast']['forecastday'])
+			'''
+			pass
 		# Common parameters
+		'''
+		city_name = weather_dic['location']['name']
+		country_name = weather_dic['location']['country']
+		'''
 		pass
 
 	# /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ #
@@ -83,48 +127,48 @@ def source2standard(source, weather_dic):
 	##################################################
 	# MORE INFO IN README.MD                         #
 	##################################################
+	standard_weather_dic = {}
 	#==============# Current weather #===============#
-	current = {
-		'date': c_date, # '2018-11-08'
-		'temp_c': c_temp_c, # 51.8
-		'is_day': c_is_day, # 1
-		'precip_mm': c_precip_mm, # 0.2
-		'text': c_text, # 'Partly cloudy'
-		'code': c_code, # 1003
-		'last_updated': c_last_updated # '2018-11-08 17:45'
-	}
-	#=============# Forecast weather #===============#
-	# Forecast day list
-	forecastday = []
-	i=0
-	for x in f_date:
-		forecastday.append({
-				'date': f_date[i], # '2018-11-08'
-				'avgtemp_c': f_avgtemp_c[i], # 10.7
-				'mintemp_c': f_mintemp_c[i], # 8.3
-				'maxtemp_c': f_maxtemp_c[i], # 12.9
-				'totalprecip_mm': f_totalprecip_mm[i], # 0.04
-				'text': f_text[i], # 1240
-				'code': f_code[i] # 'Light rain shower'
-			})
-		i+=1
-	# Forecast weather
-	forecast = {
-		'forecastday': forecastday,
-		'last_updated': f_last_updated, # '2018-11-08 17:45'
-		'forecast_days': f_forecast_days # 7
+	if(forecast_type == 'current' or forecast_type == 'all'): # Currrent or all data selected
+		current = {
+			'date': c_date, # '2018-11-08'
+			'temp_c': c_temp_c, # 51.8
+			'is_day': c_is_day, # 1
+			'precip_mm': c_precip_mm, # 0.2
+			'text': c_text, # 'Partly cloudy'
+			'code': c_code, # 1003
+			'last_updated': c_last_updated # '2018-11-08 17:45'
 		}
+		standard_weather_dic.update({'current': current}) # Saves data in standard_weather_dic
+	#=============# Forecast weather #===============#
+	if(forecast_type == 'forecast' or forecast_type == 'all'): # Forecast or all data selected
+		# Forecast day list
+		forecastday = []
+		i=0
+		for x in f_date:
+			forecastday.append({
+					'date': f_date[i], # '2018-11-08'
+					'avgtemp_c': f_avgtemp_c[i], # 10.7
+					'mintemp_c': f_mintemp_c[i], # 8.3
+					'maxtemp_c': f_maxtemp_c[i], # 12.9
+					'totalprecip_mm': f_totalprecip_mm[i], # 0.04
+					'text': f_text[i], # 1240
+					'code': f_code[i] # 'Light rain shower'
+				})
+			i+=1
+		# Forecast weather
+		forecast = {
+			'forecastday': forecastday,
+			'last_updated': f_last_updated, # '2018-11-08 17:45'
+			'forecast_days': f_forecast_days # 7
+			}
+		standard_weather_dic.update({'forecast': forecast}) # Saves data in standard_weather_dic
 	#=============# Common parameters #==============#
 	common = {
 		'city_name': city_name, # 'Madrid'
 		'country_name': country_name # 'Spain'
 	}
-	####### Saves data in standard_weather_dic #######
-	standard_weather_dic = {
-		'current': current,
-		'forecast': forecast,
-		'common': common
-	}
+	standard_weather_dic.update({'common': common}) # Saves data in standard_weather_dic
 	##################################################
 
 	return standard_weather_dic

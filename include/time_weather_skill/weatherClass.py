@@ -62,12 +62,12 @@ class Weather():
         @param input_dic: Weather dictionary in STANDARD format.
         @param extra_dic: Dictionary with extra info to save.
         """
+        
+        # Define filename
+        filename = self._WEATHER_FILENAME + '_' + input_dic['common']['city_name'].lower() + '_' +  input_dic['common']['country_name'].lower()
 
         # Add extra info
         input_dic.update(extra_dic)
-
-        # Define filename
-        filename = self._WEATHER_FILENAME + '_' + input_dic['common']['city_name'].lower() + '_' +  input_dic['common']['country_name'].lower()
  
         # Write the data in the JSON file
         self._create_json.write(input_dic, filename) # Write weather info into JSON file
@@ -241,6 +241,8 @@ class Weather():
         @return result_info_dic: Weather dictionary result.
         """
 
+        print('Getting info (' + location + '/' + forecast_type + '/' +  date + '): ' + info_required)
+
         # Initialize result
         result, result_info_dic = -1, {}
         # Initialize variables
@@ -252,13 +254,11 @@ class Weather():
         # Prepare info_required list
         info_required = info_required.replace(' ','') # Remove spaces from the string
         info_required_list = info_required.split(",") # Separate the goal in various parts
-
         if('advanced' in info_required_list): # Check if advanced list is requested
             if(forecast_type == 'current'):
                 info_required_list = self._INFO_ADVANCED_LIST_CURRENT[:] # Replace the list with the advanced list
             if(forecast_type == 'forecast'):
                 info_required_list = self._INFO_ADVANCED_LIST_FORECAST[:] # Replace the list with the advanced list
-
         if('basic' in info_required_list): # Check if basic list is requested
             if(forecast_type == 'current'):
                 info_required_list = self._INFO_BASIC_LIST_CURRENT[:] # Replace the list with the basic list
@@ -266,32 +266,33 @@ class Weather():
                 info_required_list = self._INFO_BASIC_LIST_FORECAST[:] # Replace the list with the basic list
 
 
-        ############### Fill the result_info dictionary ###############
+        ################# Fill the result_info dictionary #################
         request = False # Indicates if a request has been done
 
-        # Search in the info required list
+        # Search all the info required
         for info_required_i in info_required_list:
-            found = -1
-            # ############## Take data from TimeAstral ############## #
+            found = -1 # Indicates if info required has been found before making requests
+            # ################ Take data from TimeAstral ################ #
             if(forecast_type == 'current' and info_required_i in self._TIMECLASS_LIST): # This info can be taken with TimeClass
-                city_name, _ = self._location(location) # # Get the city name form location variable
+                city_name, _ = self._location(location) # # Get the city name from location variable
                 print('Searching \'' + info_required_i + '\' in TimeAstral: ' + city_name)
-                time_var = TimeAstral()
+                time_var = TimeAstral() # TimeAstral variable
                 found, data_time = time_var.get_info(city_name, info_required_i) # Get TimeAstral info
                 if(found != -1):
                     result_info_dic.update({info_required_i: data_time})
                 else:
                     rospy.logwarn("TimeAstral ERROR: Data not found")
 
-            # ######## Take data from local or URL requests ######### #
-            if(found == -1): # Parameter not found with other source
+            # ########## Take data from local or URL requests ########### #
+            if(found == -1): # Parameter not found with another source
                 # Make only ONE request
-                if(not request): # A request has not been done
+                if(not request): # A request has not been done yet
                     result, standard_weather_dic = self._request_weather(location, forecast_type, date, info_required) # Get the weather info
                     request = True
                     if(result == -1): # If there is a request error, it gets out
                         return result, {}
-                
+                        
+                # ##### Search the info in the standard_weather_dic ##### #
                 # Checks if info required exists in forecast_type list
                 if info_required_i in standard_weather_dic[forecast_type]:
                     result_info_dic.update({info_required_i: standard_weather_dic[forecast_type][info_required_i]})
@@ -303,10 +304,9 @@ class Weather():
                 if 'common' in standard_weather_dic:
                     if info_required_i in standard_weather_dic['common']:
                         result_info_dic.update({info_required_i: standard_weather_dic['common'][info_required_i]})
-            print(result_info_dic)
-        result = 0
+        ###################################################################
 
-        return result, result_info_dic
+        return 0, result_info_dic
 
     def _request_weather(self, location, forecast_type, date, info_required):
         """
@@ -321,42 +321,39 @@ class Weather():
         @return result_info_dic: Weather dictionary result.
         """
 
-        # Initialize results
-        result, result_info_dic = -1, {}
         # Initialize variables
         lang = 'es'
-        updated = False # Variable to update local info
+        city_name, country_name = self._location(location) # Divide the location into city and country names
 
-        ################ Checks if it is in local ################
-        # ############# Get city and country names ############# #
-        city_name, country_name = self._location(location)
-
-        # ################# Make local request ################# #
+        ################### Make local request ###################
         print("Making local request: " + city_name + ", " + country_name)
-        result, result_info_dic = self._local_request(city_name, country_name)
+        local_result, local_result_info_dic = self._local_request(city_name, country_name)
 
-        # ########### Check if local data is updated ########### #
-        if(result == 0):
-            # Manage last_update variable
-            last_update = DatetimeManager(result_info_dic[forecast_type]['last_updated'])
-            print('Last update (' + forecast_type + '): ' + last_update.date())
-            # Current datatime
-            now = datetime.datetime.now() # Get current date
-            print('Local date: ' + str(now.year) + '-' + str(now.month) + '-' + str(now.day))
-            if(now.year == last_update.year() and now.month == last_update.month() and now.day == last_update.day()): # Date updated
-                print('Date is updated')
-                if(forecast_type == 'forecast'):
-                    pass
+        # ############### Local request success ################ #
+        if(local_result == 0):
+            try:
+                # ######### Check if local data is updated ######### #
+                # Manage last_update variable datatime
+                last_update = DatetimeManager(local_result_info_dic[forecast_type]['last_updated'])
+                print('Last update (' + forecast_type + '): ' + last_update.date())
+                # Manage current datatime
+                now = datetime.datetime.now() # Get current date
+                print('Local date: ' + str(now.year) + '-' + str(now.month) + '-' + str(now.day))
+                updated = False
+                if(now.year == int(last_update.year()) and now.month == int(last_update.month()) and now.day == int(last_update.day())): # Date updated
+                    print('Date is updated')
+                    if(forecast_type == 'forecast'):
+                        pass
 
-                if(forecast_type == 'current'):
-                    pass
-            else: # Date NOT updated
-                rospy.logwarn("Local request ERROR: File not updated")
-
-            return result, result_info_dic
-
-            
-        
+                    if(forecast_type == 'current'):
+                        pass
+                else: # Date NOT updated
+                    rospy.logwarn("Local request ERROR: File not updated")
+                if(updated):
+                    return local_result, local_result_info_dic
+                
+            except KeyError:
+                rospy.logwarn("Local request ERROR: Key Error")
 
         '''
         if True:
@@ -376,10 +373,15 @@ class Weather():
 
         '''
 
+        ##########################################################
+
 
         ################## Make URL requests #####################
+        url_result, url_result_info_dic = -1, {}
         for source in self._SOURCE_LIST: # Selects the source from the source list
             print("Making URL request to: '" + source + "'")
+
+            url, params = '', {}
 
             ################# CHANGE CODE HERE ###################
             # >> Each source must get the FORECAST and        << #
@@ -395,39 +397,66 @@ class Weather():
                 #############################################
 
                 # Params
-                url_forecast = 'http://api.apixu.com/v1/forecast.json'
+                url = 'http://api.apixu.com/v1/forecast.json'
                 params = {
                     'key': '9838870ce6324daf95d161656180811',
                     'q': location,
                     'days': 7, # Forecast range
                     'lang': lang
                     }
-                # Request
-                result, result_info_dic = self._URL_request(url_forecast, params)
 
             ########### Source 2 ###########
             elif(source == 'source2'):
-                #Params
-                #Request
-                pass
+                if(forecast_type == 'current'):
+                    #Params
+                    url = ''
+                    params = {
+                        'key': '9838870ce6324daf95d161656180811',
+                        'q': location,
+                        'days': 7, # Forecast range
+                        'lang': lang
+                        }
+                if(forecast_type == 'forecast'):
+                    #Params
+                    url = ''
+                    params = {
+                        'key': '9838870ce6324daf95d161656180811',
+                        'q': location,
+                        'days': 7, # Forecast range
+                        'lang': lang
+                        }
+            # Request
+            url_result, url_result_info_dic = self._URL_request(url, params)
 
             # /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ #
             ######################################################
 
             ####### Request success #######
-            if(result == 0): # URL request success
+            if(url_result == 0): # URL request success
                 # Change weather format to standard format
-                result_info_dic = source2standard(source, result_info_dic)
+                url_result_info_dic = source2standard(source, forecast_type, url_result_info_dic)
+                print url_result_info_dic
+
+                # Updates the local dictionary if it exists (if it does not exist, 'local_result_info_dic' will be empty, so no problem)
+                # Update local dic variable with new content
+                if 'current' in url_result_info_dic:
+                    local_result_info_dic['current'] = url_result_info_dic['current']
+                if 'forecast' in url_result_info_dic:
+                    local_result_info_dic['forecast'] = url_result_info_dic['forecast']
+                local_result_info_dic['common'] = url_result_info_dic['common']
+                url_result_info_dic = local_result_info_dic # Change the name of the variable
+
+                ##### Save info #####
                 # Saves extra info in the file
                 extra_dic = {
                     'lang': lang
                 }
                 # Saves the content in a local file
-                self._save_json(result_info_dic)
+                self._save_json(url_result_info_dic, extra_dic)
                 break # Stops the URL requests list loop
 
 
-        return result, result_info_dic
+        return url_result, url_result_info_dic
 
     def manage_weather(self, goal_vec):
         """
@@ -466,7 +495,7 @@ if __name__ == '__main__':
     	print("[" + pkg_name + "] __main__")
         rospy.init_node('my_node', log_level=rospy.DEBUG)
         weather = Weather()
-        result, result_info = weather.manage_weather(['Madrid', 'current', '1', 'basic'])
+        result, result_info = weather.manage_weather(['madrid', 'current', '1', 'basic'])
         print(result_info)
 
 
