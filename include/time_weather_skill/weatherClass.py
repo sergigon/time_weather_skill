@@ -35,12 +35,14 @@ class Weather():
     # Lists
     _SOURCE_LIST = ['apixu', 'source1', 'source2'] # List of the sources
     _UPDATE_HOURS = [23, 19, 14, 9, 4] # List of hours for current request
-    _INFO_BASIC_LIST_CURRENT = ['date', 'temp_c', 'is_day', 'text', 'code', 'city_name', 'country_name', 'last_updated'] # Basic current list
-    _INFO_BASIC_LIST_FORECAST = ['date', 'avgtemp_c', 'text', 'code', 'city_name', 'country_name', 'last_updated'] # Basic advanced list
-    _INFO_ADVANCED_LIST_CURRENT = _INFO_BASIC_LIST_CURRENT[:]
-    _INFO_ADVANCED_LIST_FORECAST = _INFO_BASIC_LIST_FORECAST[:]
-    _INFO_ADVANCED_LIST_CURRENT.extend(['precip_mm']) # Advanced current list
-    _INFO_ADVANCED_LIST_FORECAST.extend(['mintemp_c', 'maxtemp_c', 'totalprecip_mm']) # Advanced forecast list
+    _INFO_BASIC_LIST = {
+        'current': ['date', 'temp_c', 'is_day', 'text', 'code', 'city_name', 'country_name', 'last_updated'], # Basic current list
+        'forecast': ['date', 'avgtemp_c', 'text', 'code', 'city_name', 'country_name', 'last_updated'] # Basic advanced list
+        }
+    _INFO_ADVANCED_LIST = _INFO_BASIC_LIST.copy()
+    _INFO_ADVANCED_LIST['current'].extend(['precip_mm']) # Advanced current list
+    _INFO_ADVANCED_LIST['forecast'].extend(['mintemp_c', 'maxtemp_c', 'totalprecip_mm']) # Advanced forecast list
+
     _TIMECLASS_LIST = ['is_day'] # List of the TimeClass parameters
 
     def __init__(self):
@@ -355,7 +357,6 @@ class Weather():
             if(url_result == 0): # URL request success
                 # Change weather format to standard format
                 url_result_info_dic = source2standard(source, forecast_type, url_result_info_dic)
-                print url_result_info_dic
 
                 # Updates the local dictionary if it exists (if it does not exist, 'local_result_info_dic' will be empty, so no problem)
                 # Update local dic variable with new content
@@ -383,7 +384,7 @@ class Weather():
         Get the info specified. It uses local methods or make requests to that end.
 
         @param location: City to get weather. Format: 'Madrid' or 'Madrid, Spain'.
-        @param forecast_type: 'forecast' or 'current'
+        @param forecast_type: 'forecast' or 'current'.
         @param date: Date for the weather.
         @param info_required: Type of info_required needed.
 
@@ -405,15 +406,10 @@ class Weather():
         info_required = info_required.replace(' ','') # Remove spaces from the string
         info_required_list = info_required.split(",") # Separate the goal in various parts
         if('advanced' in info_required_list): # Check if advanced list is requested
-            if(forecast_type == 'current'):
-                info_required_list = self._INFO_ADVANCED_LIST_CURRENT[:] # Replace the list with the advanced list
-            if(forecast_type == 'forecast'):
-                info_required_list = self._INFO_ADVANCED_LIST_FORECAST[:] # Replace the list with the advanced list
+            info_required_list = self._INFO_ADVANCED_LIST[forecast_type][:] # Replace the list with the advanced list
         if('basic' in info_required_list): # Check if basic list is requested
-            if(forecast_type == 'current'):
-                info_required_list = self._INFO_BASIC_LIST_CURRENT[:] # Replace the list with the basic list
-            if(forecast_type == 'forecast'):
-                info_required_list = self._INFO_BASIC_LIST_FORECAST[:] # Replace the list with the basic list
+            info_required_list = self._INFO_BASIC_LIST[forecast_type][:] # Replace the list with the basic list
+
 
 
         ################# Fill the result_info dictionary #################
@@ -495,7 +491,7 @@ if __name__ == '__main__':
     	print("[" + pkg_name + "] __main__")
         rospy.init_node('my_node', log_level=rospy.DEBUG)
         weather = Weather()
-        result, result_info = weather.manage_weather(['madrid', 'current', '1', 'basic'])
+        result, result_info = weather.manage_weather(['leganes, spain', 'current', '1', 'advanced'])
         print(result_info)
 
 
