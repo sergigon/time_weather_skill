@@ -48,9 +48,8 @@ class Weather():
         Init method.
         """
 
-        # Weather sources
-        
-        self._create_json = CreateJson() # CreateJson object
+        # CreateJson object
+        self._create_json = CreateJson()
 
     def _save_json(self, input_dic, extra_dic={}):
         """
@@ -101,6 +100,8 @@ class Weather():
         Fix the date and converts to int.
 
         @param date: date to fix.
+
+        @return date: date fixed
         """
 
         if (date == 'today'):
@@ -226,87 +227,6 @@ class Weather():
             print('Local request not available')
             return False
         '''
-
-
-    def _get_info(self, location, forecast_type, date, info_required):
-        """
-        Get the info specified. It uses local methods or make requests to that end.
-
-        @param location: City to get weather. Format: 'Madrid' or 'Madrid, Spain'.
-        @param forecast_type: 'forecast' or 'current'
-        @param date: Date for the weather.
-        @param info_required: Type of info_required needed.
-
-        @return result: Final result.
-        @return result_info_dic: Weather dictionary result.
-        """
-
-        print('Getting info (' + location + '/' + forecast_type + '/' +  date + '): ' + info_required)
-
-        # Initialize result
-        result, result_info_dic = -1, {}
-        # Initialize variables
-        standard_weather_dic = {}
-
-        # Converts to int the date for the result_info dictionary
-        date = self._fix_date(date)
-
-        # Prepare info_required list
-        info_required = info_required.replace(' ','') # Remove spaces from the string
-        info_required_list = info_required.split(",") # Separate the goal in various parts
-        if('advanced' in info_required_list): # Check if advanced list is requested
-            if(forecast_type == 'current'):
-                info_required_list = self._INFO_ADVANCED_LIST_CURRENT[:] # Replace the list with the advanced list
-            if(forecast_type == 'forecast'):
-                info_required_list = self._INFO_ADVANCED_LIST_FORECAST[:] # Replace the list with the advanced list
-        if('basic' in info_required_list): # Check if basic list is requested
-            if(forecast_type == 'current'):
-                info_required_list = self._INFO_BASIC_LIST_CURRENT[:] # Replace the list with the basic list
-            if(forecast_type == 'forecast'):
-                info_required_list = self._INFO_BASIC_LIST_FORECAST[:] # Replace the list with the basic list
-
-
-        ################# Fill the result_info dictionary #################
-        request = False # Indicates if a request has been done
-
-        # Search all the info required
-        for info_required_i in info_required_list:
-            found = -1 # Indicates if info required has been found before making requests
-            # ################ Take data from TimeAstral ################ #
-            if(forecast_type == 'current' and info_required_i in self._TIMECLASS_LIST): # This info can be taken with TimeClass
-                city_name, _ = self._location(location) # # Get the city name from location variable
-                print('Searching \'' + info_required_i + '\' in TimeAstral: ' + city_name)
-                time_var = TimeAstral() # TimeAstral variable
-                found, data_time = time_var.get_info(city_name, info_required_i) # Get TimeAstral info
-                if(found != -1):
-                    result_info_dic.update({info_required_i: data_time})
-                else:
-                    rospy.logwarn("TimeAstral ERROR: Data not found")
-
-            # ########## Take data from local or URL requests ########### #
-            if(found == -1): # Parameter not found with another source
-                # Make only ONE request
-                if(not request): # A request has not been done yet
-                    result, standard_weather_dic = self._request_weather(location, forecast_type, date, info_required) # Get the weather info
-                    request = True
-                    if(result == -1): # If there is a request error, it gets out
-                        return result, {}
-                        
-                # ##### Search the info in the standard_weather_dic ##### #
-                # Checks if info required exists in forecast_type list
-                if info_required_i in standard_weather_dic[forecast_type]:
-                    result_info_dic.update({info_required_i: standard_weather_dic[forecast_type][info_required_i]})
-                # Checks if info required exists in 'forecast'/'forecastday' list
-                if forecast_type == 'forecast':
-                    if info_required_i in standard_weather_dic[forecast_type]['forecastday'][date]:
-                        result_info_dic.update({info_required_i: standard_weather_dic[forecast_type]['forecastday'][date][info_required_i]})
-                # Checks if info required exists in 'common' list
-                if 'common' in standard_weather_dic:
-                    if info_required_i in standard_weather_dic['common']:
-                        result_info_dic.update({info_required_i: standard_weather_dic['common'][info_required_i]})
-        ###################################################################
-
-        return 0, result_info_dic
 
     def _request_weather(self, location, forecast_type, date, info_required):
         """
@@ -457,6 +377,86 @@ class Weather():
 
 
         return url_result, url_result_info_dic
+
+    def _get_info(self, location, forecast_type, date, info_required):
+        """
+        Get the info specified. It uses local methods or make requests to that end.
+
+        @param location: City to get weather. Format: 'Madrid' or 'Madrid, Spain'.
+        @param forecast_type: 'forecast' or 'current'
+        @param date: Date for the weather.
+        @param info_required: Type of info_required needed.
+
+        @return result: Final result.
+        @return result_info_dic: Weather dictionary result.
+        """
+
+        print('Getting info (' + location + '/' + forecast_type + '/' +  date + '): ' + info_required)
+
+        # Initialize result
+        result, result_info_dic = -1, {}
+        # Initialize variables
+        standard_weather_dic = {}
+
+        # Converts to int the date for the result_info dictionary
+        date = self._fix_date(date)
+
+        # Prepare info_required list
+        info_required = info_required.replace(' ','') # Remove spaces from the string
+        info_required_list = info_required.split(",") # Separate the goal in various parts
+        if('advanced' in info_required_list): # Check if advanced list is requested
+            if(forecast_type == 'current'):
+                info_required_list = self._INFO_ADVANCED_LIST_CURRENT[:] # Replace the list with the advanced list
+            if(forecast_type == 'forecast'):
+                info_required_list = self._INFO_ADVANCED_LIST_FORECAST[:] # Replace the list with the advanced list
+        if('basic' in info_required_list): # Check if basic list is requested
+            if(forecast_type == 'current'):
+                info_required_list = self._INFO_BASIC_LIST_CURRENT[:] # Replace the list with the basic list
+            if(forecast_type == 'forecast'):
+                info_required_list = self._INFO_BASIC_LIST_FORECAST[:] # Replace the list with the basic list
+
+
+        ################# Fill the result_info dictionary #################
+        request = False # Indicates if a request has been done
+
+        # Search all the info required
+        for info_required_i in info_required_list:
+            found = -1 # Indicates if info required has been found before making requests
+            # ################ Take data from TimeAstral ################ #
+            if(forecast_type == 'current' and info_required_i in self._TIMECLASS_LIST): # This info can be taken with TimeClass
+                city_name, _ = self._location(location) # # Get the city name from location variable
+                print('Searching \'' + info_required_i + '\' in TimeAstral: ' + city_name)
+                time_var = TimeAstral() # TimeAstral variable
+                found, data_time = time_var.get_info(city_name, info_required_i) # Get TimeAstral info
+                if(found != -1):
+                    result_info_dic.update({info_required_i: data_time})
+                else:
+                    rospy.logwarn("TimeAstral ERROR: Data not found")
+
+            # ########## Take data from local or URL requests ########### #
+            if(found == -1): # Parameter not found with another source
+                # Make only ONE request
+                if(not request): # A request has not been done yet
+                    result, standard_weather_dic = self._request_weather(location, forecast_type, date, info_required) # Get the weather info
+                    request = True
+                    if(result == -1): # If there is a request error, it gets out
+                        return result, {}
+
+                # ##### Search the info in the standard_weather_dic ##### #
+                # Checks if info required exists in forecast_type list
+                if info_required_i in standard_weather_dic[forecast_type]:
+                    result_info_dic.update({info_required_i: standard_weather_dic[forecast_type][info_required_i]})
+                # Checks if info required exists in 'forecast'/'forecastday' list
+                if forecast_type == 'forecast':
+                    if info_required_i in standard_weather_dic[forecast_type]['forecastday'][date]:
+                        result_info_dic.update({info_required_i: standard_weather_dic[forecast_type]['forecastday'][date][info_required_i]})
+                # Checks if info required exists in 'common' list
+                if 'common' in standard_weather_dic:
+                    if info_required_i in standard_weather_dic['common']:
+                        result_info_dic.update({info_required_i: standard_weather_dic['common'][info_required_i]})
+        ###################################################################
+
+        return 0, result_info_dic
 
     def manage_weather(self, goal_vec):
         """
