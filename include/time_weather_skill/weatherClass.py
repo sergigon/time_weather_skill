@@ -14,11 +14,13 @@ __status__ = "Development"
 import rospy
 import requests # URL requests
 import datetime # Gets actual date
+import copy
 
 from time_weather_skill.create_json import CreateJson
 from time_weather_skill.weather_format_changer import source2standard
 from time_weather_skill.datetime_manager import DatetimeManager
 from time_weather_skill.timeClass import TimeAstral
+from time_weather_skill.csv_reader import csv_reader_params
 
 pkg_name = 'time_weather_skill'
 
@@ -28,9 +30,10 @@ class Weather():
     Weather class.
     """
 
-    # Variables
+    # Constants
     _GOAL_MAX_SIZE = 5 # Max size of the weather goal
     _WEATHER_FILENAME = 'weather' # Name of the file to store the weather data
+    _PARAMS_FILENAME = 'weather_sources_params' # Name of the file to store the sources params data
 
     # Lists
     _SOURCE_LIST = ['apixu', 'source1', 'source2'] # List of the sources
@@ -39,7 +42,7 @@ class Weather():
         'current': ['date', 'temp_c', 'is_day', 'text', 'code', 'city_name', 'country_name', 'last_updated'], # Basic current list
         'forecast': ['date', 'avgtemp_c', 'text', 'code', 'city_name', 'country_name', 'last_updated'] # Basic advanced list
         }
-    _INFO_ADVANCED_LIST = _INFO_BASIC_LIST.copy()
+    _INFO_ADVANCED_LIST = copy.deepcopy(_INFO_BASIC_LIST)
     _INFO_ADVANCED_LIST['current'].extend(['precip_mm']) # Advanced current list
     _INFO_ADVANCED_LIST['forecast'].extend(['mintemp_c', 'maxtemp_c', 'totalprecip_mm']) # Advanced forecast list
 
@@ -303,51 +306,28 @@ class Weather():
         for source in self._SOURCE_LIST: # Selects the source from the source list
             print("Making URL request to: '" + source + "'")
 
-            url, params = '', {}
-
             ################# CHANGE CODE HERE ###################
             # >> Each source must get the FORECAST and        << #
             # >> CURRENT json info and SAVE it in the         << #
-            # >> variable 'result_info_dic'                   << #
+            # >> variable 'result_info_dic'.                  << #
             # \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ #
 
-            ########### Apixu source ###########
+            ############ Get params ############
+            url, params, _ = csv_reader_params(self._PARAMS_FILENAME, source, forecast_type)
+
+            ########## Update location #########
+            # Each source has a different key  #
+            # for the location, so this must   #
+            # be updated from the code.        #
+            ####################################
+            # Apixu source
             if(source == 'apixu'):
-                ################### NOTES ###################
-                # It only make ONE request, since           #
-                # forecast requests gives also current info #
-                #############################################
-
-                # Params
-                url = 'http://api.apixu.com/v1/forecast.json'
-                params = {
-                    'key': '9838870ce6324daf95d161656180811',
-                    'q': location,
-                    'days': 7, # Forecast range
-                    'lang': lang
-                    }
-
-            ########### Source 2 ###########
+                params.update({'q': location})
+            # Source 2
             elif(source == 'source2'):
-                if(forecast_type == 'current'):
-                    #Params
-                    url = ''
-                    params = {
-                        'key': '9838870ce6324daf95d161656180811',
-                        'q': location,
-                        'days': 7, # Forecast range
-                        'lang': lang
-                        }
-                if(forecast_type == 'forecast'):
-                    #Params
-                    url = ''
-                    params = {
-                        'key': '9838870ce6324daf95d161656180811',
-                        'q': location,
-                        'days': 7, # Forecast range
-                        'lang': lang
-                        }
-            # Request
+                params.update({'q': location})
+
+            ############# Request ##############
             url_result, url_result_info_dic = self._URL_request(url, params)
 
             # /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ #
