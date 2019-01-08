@@ -18,7 +18,7 @@ rospack = rospkg.RosPack() # rospkg object to get the json path
 
 pkg_name = "time_weather_skill"
 
-def csv_reader(filename, source, forecast_type):
+def csv_reader_params(filename, source, forecast_type):
 	"""
 	Reads a weather csv and returns the info given certain parameters.
 	
@@ -85,7 +85,6 @@ def csv_reader(filename, source, forecast_type):
 				if(cell == EXTRA_INFO_H): # Extra Info column
 					extra_info_h_col = col_n
 
-	print('######################################')
 
 	################ Search source ################
 	# Searchs the source start and end rows.      #
@@ -93,8 +92,6 @@ def csv_reader(filename, source, forecast_type):
 	found = False
 	# From header row to end of matrix
 	for i in range(h_row+1, len(csv_matrix[:])):
-		print(str(i) + ': ' + csv_matrix[i][source_h_col])
-
 		# Search the source row
 		if(csv_matrix[i][source_h_col] == source):
 			source_row_start = i
@@ -114,10 +111,6 @@ def csv_reader(filename, source, forecast_type):
 		rospy.logwarn("csv reader ERROR: Source not found")
 		return '', {}, {}
 
-	print('Start of ' + '\'' + source + '\'' + ' found: row ' + str(source_row_start))
-	print('End of ' + '\'' + source + '\'' + ' found: row ' + str(source_row_stop))
-	print('######################################')
-
 	############ Search forecast type #############
 	# Searchs for the forecast type START         #
 	# and END rows.                               #
@@ -130,8 +123,6 @@ def csv_reader(filename, source, forecast_type):
 	if(csv_matrix[source_row_start][forecast_type_h_col] != ''):
 		# From start source row to end source row
 		for i in range(source_row_start, source_row_stop):
-			print(str(i) + ': ' + csv_matrix[i][forecast_type_h_col])
-
 			# Search the forecast type row
 			if(csv_matrix[i][forecast_type_h_col] == forecast_type):
 				forecast_type_row_start = i
@@ -146,10 +137,7 @@ def csv_reader(filename, source, forecast_type):
 					forecast_type_row_stop = i+1
 					break
 
-	print('Start of ' + '\'' + forecast_type + '\'' + ' found: row ' + str(forecast_type_row_start))
-	print('End of ' + '\'' + forecast_type + '\'' + ' found: row ' + str(forecast_type_row_stop))
 	print('######################################')
-
 	################# Search url ##################
 	url = csv_matrix[forecast_type_row_start][url_h_col]
 	print('url: ' + url)
@@ -165,6 +153,7 @@ def csv_reader(filename, source, forecast_type):
 	for i in range(forecast_type_row_start, forecast_type_row_stop):
 		extra_info.update({csv_matrix[i][extra_info_h_col]: csv_matrix[i][extra_info_h_col+1]})
 	print('extra_info: ', extra_info)
+	print('######################################')
 
 	return url, params, extra_info # Info not found
 
@@ -177,4 +166,4 @@ if __name__ == '__main__':
 	forecast_type = 'current'
 
 	print("INPUT: " + source + ', ' + forecast_type)
-	print(csv_reader(filename, source, forecast_type))
+	print(csv_reader_params(filename, source, forecast_type))

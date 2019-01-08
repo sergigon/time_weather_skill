@@ -133,14 +133,14 @@ class Weather():
             r = requests.get(url_forecast, params = params)
             # Get the data from the URL in JSON format
             if 'error' in r.json(): # ERROR in the request
-                print('URL request ERROR')
-                print(r.json()['error']['message']) # Print the error
+            # Print the error
+                rospy.logwarn('URL request ERROR: ' + r.json()['error']['message'])
                 return -1, {}
             else: # NO error in the request
                 print('URL request succeded')
                 return 0, r.json()
         except:
-            print('Connection ERROR')
+            rospy.logwarn("URL request ERROR: Connection ERROR")
             return -1, {}
 
     def _local_request(self, city_name, country_name = ''):
@@ -247,7 +247,7 @@ class Weather():
         """
 
         # Initialize variables
-        lang = 'es'
+        lang = 'en'
         city_name, country_name = self._location(location) # Divide the location into city and country names
 
         ################### Make local request ###################
@@ -303,35 +303,23 @@ class Weather():
 
         ################## Make URL requests #####################
         url_result, url_result_info_dic = -1, {}
-        for source in self._SOURCE_LIST: # Selects the source from the source list
+        # Selects the source from the source list
+        for source in self._SOURCE_LIST:
             print("Making URL request to: '" + source + "'")
-
-            ################# CHANGE CODE HERE ###################
-            # >> Each source must get the FORECAST and        << #
-            # >> CURRENT json info and SAVE it in the         << #
-            # >> variable 'result_info_dic'.                  << #
-            # \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ #
 
             ############ Get params ############
             url, params, _ = csv_reader_params(self._PARAMS_FILENAME, source, forecast_type)
 
-            ########## Update location #########
-            # Each source has a different key  #
-            # for the location, so this must   #
-            # be updated from the code.        #
-            ####################################
-            # Apixu source
-            if(source == 'apixu'):
-                params.update({'q': location})
-            # Source 2
-            elif(source == 'source2'):
-                params.update({'q': location})
+            ########### Update params ##########
+            for key in params:
+                if(params[key][:2] == '__'):
+                    if(params[key][2:] == 'location'):
+                        params.update({key: location})
+                    elif(params[key][2:] == 'lang'):
+                        params.update({key: lang})
 
             ############# Request ##############
             url_result, url_result_info_dic = self._URL_request(url, params)
-
-            # /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ #
-            ######################################################
 
             ####### Request success #######
             if(url_result == 0): # URL request success

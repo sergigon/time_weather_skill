@@ -117,6 +117,41 @@ This input can be extendable modifing each weather class inside the code.
 Each number corresponds to one variable:
 + '101' (Screen, movement, voice)
 
+## Introducing new weather sources
+### Local sources
+### Online sources
+To make url requests to new sources, there must be some parameters that have to be specified. Each url source need different parameters.
+
+These parameters must be modified in the `weather_sources_params.csv`.
+
+At the end of the table there are **two examples**.
+
+#### source
+Name given to the new source. It must be at the **beginning** of the new rows. created.
+#### forecast_type
+Used to specify the 'current' or 'forecast' parameters.
+
+Some sources make a distinction when making the requests between current weather or forecast. To that end this column allows to specify different parameters depending on it.
+
+If the source only needs one only request for both 'current' and 'forecast', then leave it blank.
+
+#### url
+Url path for making the request.
+
+#### params
+List of parameters needed to make the request.
+
+In the first column specify the keys, and in the next column write the corresponding values.
+
+**IMPORTANT**: Use the following values if you want them to be filled automatically (recommended):
++ `__location`: location specified in the code
++ `__lang`: languaje specified in the code
+
+#### extra_info
+List of extra info that can be useful for the code or for documentation purposes.
+
+In the first column specify the keys, and in the next column write the corresponding values.
+
 ## ROS API
 
 ### Node name
