@@ -1,0 +1,10 @@
+source,forecast_type,url,params,,extra_info,
+apixu,,http://api.apixu.com/v1/forecast.json,key,9838870ce6324daf95d161656180811,limit_forecast_days,7
+,,,q,,limit_calls,10000 calls/month
+,,,days,7,,
+,,,lang,es,,
+source2,current,http://source2.json,key,ja,limit_forecast_days,
+,,,q,je,limit_calls,
+,,,days,ji,,2
+,,,lang,jo,,
+,forecast,,,,,

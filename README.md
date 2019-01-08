@@ -28,11 +28,11 @@ Explain in detail how to run the system: nodes, launch files, etc.
 
 ## Goal
 ### Goal structure
-`'Type_of_information/city/forecast_type/information_required/day/display'`
+`'city/forecast_type/day/information_required/display'`
 
 Examples:
-+ `'weather/madrid/2/basic/101'`
-+ `'time/paris'`
++ `'madrid/forecast_type/tomorrow/basic/101'`
++ `'sydney/current/0/is_day/011'`
 
 ### Type of information
 Type of info needed.
@@ -43,7 +43,7 @@ Posible inputs:
 
 ### Forecast Type
 + **current**: Returns the current weather.
-Apixu act.: 13:45 (13:56), 17:45 (18:00), 19:00 (19:17), 19:15 (19:19), 19:45 (19:52), 20:00 (20:23), 20:15 (20:27), 20:30 (20:47), 20:45 (20:47), 1:00 (5:50)
+Apixu act.: 10:30 (10:45), 10:45 (11:05), 13:45 (13:56), 17:45 (18:00), 19:00 (19:17), 19:15 (19:19), 19:45 (19:52), 20:00 (20:23), 20:15 (20:27), 20:30 (20:47), 20:45 (20:47), 1:00 (5:50)
 + **forecast**: Returns the forecast.
 
 ### City
@@ -72,7 +72,7 @@ Posible inputs:
 
 
 ### Information_required
-Names of the info you need. To get more than one variable, specify it with separating by commas.
+Names of the info you need. To get more than one variable, specify it separating by commas.
 
 Example: **`'last_update,temp_c'`**
 
@@ -111,7 +111,7 @@ Lists:
   + Current: `Basic list`, `'precip_mm'`
   + Forecast: `Basic list`, `'mintemp_c'`, `'maxtemp_c'`, `'totalprecip_mm'`
 
-This input can be extendable modifing each weather class inside the skill code.
+This input can be extendable modifing each weather class inside the code.
 
 ### Display
 Each number corresponds to one variable:

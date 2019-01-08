@@ -22,14 +22,7 @@ def source2standard(source, forecast_type, weather_dic):
 	"""
 
 	# Initialize variables
-	# Current: (Not neccesary)
-	c_date, c_temp_c, c_is_day, c_precip_mm, c_text, c_code, c_last_updated = '', '', '', '', '', '', ''
-	# Forecast: (Not neccesary)
-	f_last_updated, f_forecast_days = '', ''
 	f_date, f_avgtemp_c, f_mintemp_c, f_maxtemp_c, f_totalprecip_mm, f_text, f_code = [], [], [], [], [], [], []
-	# Common:
-	city_name, country_name = '', ''
-
 
 	###########################################################
 	############## HOW TO IMPLEMNT NEW SOURCE #################
@@ -129,7 +122,7 @@ def source2standard(source, forecast_type, weather_dic):
 	##################################################
 	standard_weather_dic = {}
 	#==============# Current weather #===============#
-	if(forecast_type == 'current' or forecast_type == 'all'): # Currrent or all data selected
+	if(forecast_type == 'current' or forecast_type == 'all'): # 'Currrent' or 'all' data selected
 		current = {
 			'date': c_date, # '2018-11-08'
 			'temp_c': c_temp_c, # 51.8
@@ -141,7 +134,7 @@ def source2standard(source, forecast_type, weather_dic):
 		}
 		standard_weather_dic.update({'current': current}) # Saves data in standard_weather_dic
 	#=============# Forecast weather #===============#
-	if(forecast_type == 'forecast' or forecast_type == 'all'): # Forecast or all data selected
+	if(forecast_type == 'forecast' or forecast_type == 'all'): # 'Forecast' or 'all' data selected
 		# Forecast day list
 		forecastday = []
 		i=0
