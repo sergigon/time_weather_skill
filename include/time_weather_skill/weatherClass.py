@@ -15,14 +15,13 @@ import rospy
 import requests # URL requests
 import datetime # Gets actual date
 import copy
+import rospkg
 
-from time_weather_skill.create_json import CreateJson
+from time_weather_skill.sys_operations import SysOperations
 from time_weather_skill.weather_format_changer import source2standard
 from time_weather_skill.datetime_manager import DatetimeManager
 from time_weather_skill.timeClass import TimeAstral
 from time_weather_skill.csv_reader import csv_reader_params
-
-pkg_name = 'time_weather_skill'
 
 class Weather():
 
@@ -48,33 +47,43 @@ class Weather():
 
     _TIMECLASS_LIST = ['is_day'] # List of the TimeClass parameters
 
-    def __init__(self):
+    def __init__(self, rootpath):
         """
         Init method.
+
+        @param rootpath: Root path from where to work with data. Usually, the package path.
         """
+        
+        # SysOperations object
+        self._json_manager = SysOperations()
 
-        # CreateJson object
-        self._create_json = CreateJson()
+        # Gets paths
+        self._root_path = rootpath # Root path
+        self._data_path = self._root_path + '/data/' # Data path
 
-    def _save_json(self, input_dic, extra_dic={}):
+    def _save_json(self, path, input_dic, extra_dic={}):
         """
-        Save weather dictionary in a Json file. It can be added
-        extra information.
+        Save weather dictionary in a Json file.
 
+        It can be added extra information.
+        It gets the filename autmatically using the dictionary content.
         IMPORTANT: Json data must be in STANDARD format.
-
+        
+        @param path: Full directory path.
         @param input_dic: Weather dictionary in STANDARD format.
         @param extra_dic: Dictionary with extra info to save.
         """
         
         # Define filename
         filename = self._WEATHER_FILENAME + '_' + input_dic['common']['city_name'].lower() + '_' +  input_dic['common']['country_name'].lower()
+        filepath = path + filename + '.json'
 
         # Add extra info
         input_dic.update(extra_dic)
  
         # Write the data in the JSON file
-        self._create_json.write(input_dic, filename) # Write weather info into JSON file
+        print('Saving weather (' + filename + ')')
+        self._json_manager.write_json(filepath, input_dic) # Write weather info into JSON file
 
     def _location(self, location):
         """
@@ -160,30 +169,31 @@ class Weather():
         found = False
 
         # File to search (Format ex: 'weather_madrid_spain.json')
-        file_name = self._WEATHER_FILENAME
-        file_name = file_name + '_' + city_name.lower()
+        filename = self._WEATHER_FILENAME
+        filename = filename + '_' + city_name.lower()
         if (country_name != ''): # Country specified
-            file_name = file_name + '_' + country_name.lower()
+            filename = filename + '_' + country_name.lower()
 
         # Search json files in the data folder
-        list_json = self._create_json.ls_json()
+        list_json = self._json_manager.ls_json(self._data_path)
 
         # Search file in the list
-        file_name_len = len(file_name)
+        filename_len = len(filename)
         for list_i in list_json:
-            if(file_name == list_i[:file_name_len]):
-                file_name = list_i[:-5] # Get filename without the '.json' string
+            if(filename == list_i[:filename_len]):
+                filename = list_i[:-5] # Get filename without the '.json' string
+                filepath = self._data_path + filename + '.json'
                 # Check if JSON files exists
-                result_info_dic = self._create_json.load(file_name) # Load JSON file
+                result_info_dic = self._json_manager.load_json(filepath) # Load json file
                 found = True
                 break
 
         if(found and result_info_dic != -1):
-            print('\'' + file_name + '\'' + ' file found')
+            print('\'' + filename + '\'' + ' file found')
             result = 0
         else:
             result, result_info_dic = -1, {}
-            rospy.logwarn("Local request ERROR: File not found")
+            rospy.logwarn("Local request ERROR: Local file not found")
 
         return result, result_info_dic
         
@@ -247,7 +257,7 @@ class Weather():
         """
 
         # Initialize variables
-        lang = 'en'
+        lang = 'es'
         city_name, country_name = self._location(location) # Divide the location into city and country names
 
         ################### Make local request ###################
@@ -308,9 +318,15 @@ class Weather():
             print("Making URL request to: '" + source + "'")
 
             ############ Get params ############
-            url, params, _ = csv_reader_params(self._PARAMS_FILENAME, source, forecast_type)
+            print(">> Getting params")
+            filepath = self._data_path + self._PARAMS_FILENAME + '.csv'
+            url, params, _ = csv_reader_params(filepath, source, forecast_type)
 
             ########### Update params ##########
+            # If the param value starts with   #
+            # '--' the value is turned into    #
+            # the one specified in the code    #
+            ####################################
             for key in params:
                 if(params[key][:2] == '__'):
                     if(params[key][2:] == 'location'):
@@ -341,7 +357,7 @@ class Weather():
                     'lang': lang
                 }
                 # Saves the content in a local file
-                self._save_json(url_result_info_dic, extra_dic)
+                self._save_json(self._data_path, url_result_info_dic, extra_dic)
                 break # Stops the URL requests list loop
 
 
@@ -360,7 +376,9 @@ class Weather():
         @return result_info_dic: Weather dictionary result.
         """
 
-        print('Getting info (' + location + '/' + forecast_type + '/' +  date + '): ' + info_required)
+        print('################## Getting info: ##################')
+        print('>> ' + '/' + location + '/' + forecast_type + '/' +  date + '/' + info_required + '/')
+        print('###################################################')
 
         # Initialize result
         result, result_info_dic = -1, {}
@@ -395,7 +413,8 @@ class Weather():
                 if(found != -1):
                     result_info_dic.update({info_required_i: data_time})
                 else:
-                    rospy.logwarn("TimeAstral ERROR: Data not found")
+                    rospy.logwarn("Weather Class ERROR: Data not found, making a request to get it")
+
 
             # ########## Take data from local or URL requests ########### #
             if(found == -1): # Parameter not found with another source
@@ -456,10 +475,16 @@ class Weather():
 
 if __name__ == '__main__':
     try:
-    	print("[" + pkg_name + "] __main__")
+    	print("[weatherClass]: __main__")
         rospy.init_node('my_node', log_level=rospy.DEBUG)
-        weather = Weather()
-        result, result_info = weather.manage_weather(['leganes, spain', 'current', '1', 'advanced'])
+
+        # Get path
+        rospack = rospkg.RosPack()
+        pkg_name = "time_weather_skill"
+        pkg_path = rospack.get_path(pkg_name) # Package path
+
+        weather = Weather(pkg_path)
+        result, result_info = weather.manage_weather(['leganes, spain', 'current', '1', 'basic'])
         print(result_info)
 
 

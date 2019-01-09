@@ -59,6 +59,8 @@
   <exec_depend>rospy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
 
+  <exec_depend>python-rospkg</exec_depend>
+
   <depend>roslib</depend>
   <depend>actionlib</depend>
   <depend>actionlib_msgs</depend>

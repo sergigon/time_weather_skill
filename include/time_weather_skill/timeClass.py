@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__author__ = "Marcos Maroto Gomez"
+__author__ = "Sergio González Díaz"
 __copyright__ = "Social Robots Group. Robotics Lab. University Carlos III of Madrid"
-__credits__ = ["Marcos Maroto Gomez"]
+__credits__ = ["Sergio González Díaz"]
 __license__ = "LEUC3M v1.0"
 __version__ = "0.0.0"
-__maintainer__ = "Marcos Maroto Gomez"
-__email__ = "marmarot@ing.uc3m.es"
+__maintainer__ = "Sergio González Díaz"
+__email__ = "sergigon@ing.uc3m.es"
 __status__ = "Development"
 
 import rospy

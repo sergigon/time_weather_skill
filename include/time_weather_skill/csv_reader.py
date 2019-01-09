@@ -13,15 +13,13 @@ __status__ = "Development"
 import csv # Tutorial: https://pythonprogramming.net/reading-csv-files-python-3/
 import rospkg
 import rospy
+from time_weather_skill.sys_operations import SysOperations
 
-rospack = rospkg.RosPack() # rospkg object to get the json path
-
-pkg_name = "time_weather_skill"
-
-def csv_reader_params(filename, source, forecast_type):
+def csv_reader_params(filepath, source, forecast_type):
 	"""
 	Reads a weather csv and returns the info given certain parameters.
 	
+	@param filepath: Full file path.
 	@param source: Name of the source to get the info.
 	@param forecast_type: 'forecast' or 'current'.
 
@@ -30,8 +28,12 @@ def csv_reader_params(filename, source, forecast_type):
 	@return extra_info: Extra_info dicionary.
 	"""
 
-	data_path = rospack.get_path(pkg_name) + '/data/'+ filename + ".csv"
+	rospy.logdebug('[Csv Reader]: Searching \'' + source + '\' in '+ filepath)
 
+	# If file does not exist
+	if(not SysOperations().path_exists(filepath)):
+		rospy.logwarn("Csv Reader Params ERROR: File does not exist")
+		return '', {}, {}
 
 	# Constants
 	SOURCE_H = 'source' # Name of the source header
@@ -44,7 +46,7 @@ def csv_reader_params(filename, source, forecast_type):
 	params, extra_info = {}, {} # Info output
 
 	################## Open csv ##################
-	with open(data_path) as csvfile:
+	with open(filepath) as csvfile:
 		csv_reader = csv.reader(csvfile, delimiter=',')
 		
 		############ Find csv headers ############
@@ -137,33 +139,40 @@ def csv_reader_params(filename, source, forecast_type):
 					forecast_type_row_stop = i+1
 					break
 
-	print('######################################')
 	################# Search url ##################
 	url = csv_matrix[forecast_type_row_start][url_h_col]
-	print('url: ' + url)
+	rospy.logdebug('[Csv Reader]: ' + 'url: ' + str(url))
 
 	################ Search params ################
 	params = {}
 	for i in range(forecast_type_row_start, forecast_type_row_stop):
 		params.update({csv_matrix[i][params_h_col]: csv_matrix[i][params_h_col+1]})
-	print('params: ', params)
+	rospy.logdebug('[Csv Reader]: ' + 'params: ' + str(params))
 
 	############## Search extra info ##############
 	extra_info = {}
 	for i in range(forecast_type_row_start, forecast_type_row_stop):
 		extra_info.update({csv_matrix[i][extra_info_h_col]: csv_matrix[i][extra_info_h_col+1]})
-	print('extra_info: ', extra_info)
-	print('######################################')
+	rospy.logdebug('[Csv Reader]: ' + 'extra_info: ' + str(extra_info))
 
 	return url, params, extra_info # Info not found
 
 
 if __name__ == '__main__':
+	print("[csv_reader]: __main__")
 	rospy.init_node('my_node', log_level=rospy.DEBUG)
 	# Variables
 	filename = 'weather_sources_params'
 	source = 'apixu'
 	forecast_type = 'current'
+	pkg_name = "time_weather_skill"
+
+	# rospkg object
+	rospack = rospkg.RosPack()
+	# Get paths
+	pkg_path = rospack.get_path(pkg_name) # Package path
+	data_path = pkg_path + '/data/' # Data path
+	csv_file = data_path + filename + '.csv'
 
 	print("INPUT: " + source + ', ' + forecast_type)
-	print(csv_reader_params(filename, source, forecast_type))
+	print(csv_reader_params(csv_file, source, forecast_type))
