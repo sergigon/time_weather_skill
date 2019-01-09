@@ -35,7 +35,7 @@ class Weather():
     _PARAMS_FILENAME = 'weather_sources_params' # Name of the file to store the sources params data
 
     # Lists
-    _SOURCE_LIST = ['apixu', 'source1', 'source2'] # List of the sources
+    _SOURCE_LIST = ['ex', 'source1', 'source2'] # List of the sources
     _UPDATE_HOURS = [23, 19, 14, 9, 4] # List of hours for current request
     _INFO_BASIC_LIST = {
         'current': ['date', 'temp_c', 'is_day', 'text', 'code', 'city_name', 'country_name', 'last_updated'], # Basic current list
@@ -260,7 +260,7 @@ class Weather():
         city_name, country_name = self._location(location) # Divide the location into city and country names
 
         ################### Make local request ###################
-        print("Making local request: " + city_name + ", " + country_name)
+        print("-- Making local request: " + city_name + ", " + country_name + ' --')
         local_result, local_result_info_dic = self._local_request(city_name, country_name)
 
         # ############### Local request success ################ #
@@ -315,7 +315,7 @@ class Weather():
         params_filepath = self._data_path + self._PARAMS_FILENAME + '.csv'
         # Selects the source from the source list
         for source in self._SOURCE_LIST:
-            print("Making URL request to: '" + source + "'")
+            print("-- Making URL request to: '" + source + "' --")
 
             ############ Get params ############
             print(">> Getting params")
@@ -347,7 +347,12 @@ class Weather():
             ####### Request success #######
             if(url_result == 0): # URL request success
                 # Change weather format to standard format
+                print('Conversion \'' + source + '\' dictionary to standard')
                 url_result_info_dic = source2standard(source, forecast_type, url_result_info_dic)
+                # Checks if the conversion has failed
+                if(url_result_info_dic == -1):
+                    rospy.logwarn('Request Weather ERROR: ' + 'Source \'' + source + '\' to standard conversion failed')
+                    continue
 
                 # Updates the local dictionary if it exists (if it does not exist, 'local_result_info_dic' will be empty, so no problem)
                 # Update local dic variable with new content
@@ -365,9 +370,9 @@ class Weather():
                 }
                 # Saves the content in a local file
                 self._save_json(self._data_path, url_result_info_dic, extra_dic)
-                break # Stops the URL requests list loop
+                return url_result, url_result_info_dic
 
-        return url_result, url_result_info_dic
+        return -1, {}
 
     def _get_info(self, location, forecast_type, date, info_required):
         """
@@ -490,7 +495,7 @@ if __name__ == '__main__':
         pkg_path = rospack.get_path(pkg_name) # Package path
 
         weather = Weather(pkg_path)
-        result, result_info = weather.manage_weather(['leganes, spain', 'forecast', '6', 'is_day'])
+        result, result_info = weather.manage_weather(['leganes, spain', 'forecast', '6', 'basic'])
         print('#######################')
         print('result_info: ' + str(result_info))
         print('result: ' + str(result))

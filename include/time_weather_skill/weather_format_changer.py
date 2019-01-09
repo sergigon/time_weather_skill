@@ -10,6 +10,7 @@ __maintainer__ = "Sergio Gonzalez Diaz"
 __email__ = "sergigon@ing.uc3m.es"
 __status__ = "Development"
 
+import rospy
 
 def source2standard(source, forecast_type, weather_dic):
 	"""
@@ -74,7 +75,7 @@ def source2standard(source, forecast_type, weather_dic):
 	elif(source == 'source2'):
 		# Current weather
 		if(forecast_type == 'current'):
-			'''
+			
 			c_date = weather_dic['forecast']['forecastday'][0]['date']
 			c_temp_c = weather_dic['current']['temp_c']
 			c_is_day = weather_dic['current']['is_day']
@@ -82,11 +83,10 @@ def source2standard(source, forecast_type, weather_dic):
 			c_text = weather_dic['current']['condition']['text']
 			c_code = weather_dic['current']['condition']['code']
 			c_last_updated = weather_dic['current']['last_updated']
-			'''
-			pass
+			
 		# Forecast weather
 		if(forecast_type == 'forecast'):
-			'''
+			
 			for forecastday in weather_dic['forecast']['forecastday']:
 				f_date.append(forecastday['date'])
 				f_avgtemp_c.append(forecastday['day']['avgtemp_c'])
@@ -97,14 +97,17 @@ def source2standard(source, forecast_type, weather_dic):
 				f_code.append(forecastday['day']['condition']['code'])
 			f_last_updated = weather_dic['current']['last_updated']
 			f_forecast_days = len(weather_dic['forecast']['forecastday'])
-			'''
-			pass
+			
 		# Common parameters
-		'''
+		
 		city_name = weather_dic['location']['name']
 		country_name = weather_dic['location']['country']
-		'''
-		pass
+		
+		
+
+	else:
+		rospy.logwarn('Weather Format Changer ERROR: ' + '\'' + source + '\' not found')
+		return -1
 
 	# /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ /\ #
 	######################################################

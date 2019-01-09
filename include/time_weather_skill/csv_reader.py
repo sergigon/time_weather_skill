@@ -28,7 +28,7 @@ def csv_reader_params(filepath, source, forecast_type):
 	@return extra_info: Extra_info dicionary.
 	"""
 
-	rospy.logdebug('[Csv Reader]: Searching \'' + source + '\' in '+ filepath)
+	rospy.logdebug('[Csv Reader]: Searching source \'' + source + '\' in '+ filepath)
 
 	# If file does not exist
 	if(not SysOperations().path_exists(filepath)):
@@ -110,7 +110,7 @@ def csv_reader_params(filepath, source, forecast_type):
 
 	# Source not found
 	if(source_row_start == -1):
-		rospy.logwarn("csv reader ERROR: Source not found")
+		rospy.logwarn('csv reader ERROR: Source \'' + source + '\' not found')
 		return -1, {}, {}
 
 	############ Search forecast type #############
