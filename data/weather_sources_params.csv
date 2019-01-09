@@ -3,14 +3,13 @@ apixu,,http://api.apixu.com/v1/forecast.json,key,9838870ce6324daf95d161656180811
 ,,,q,__location,limit_calls,10000 calls/month
 ,,,days,7,,
 ,,,lang,__lang,,
-source2,current,http://source2.json,key,ja,limit_forecast_days,
-,,,q,je,limit_calls,
-,,,days,ji,,2
-,,,lang,jo,,
-,forecast,,,,,
-,,,,,,
-,,,,,,
-,,,,,,
+source2,current,http://api.apixu.com/v1/current.json,key,9838870ce6324daf95d161656180811,limit_calls,10000 calls/month
+,,,q,__location,,
+,,,lang,__lang,,
+,forecast,http://api.apixu.com/v1/forecast.json,key,9838870ce6324daf95d161656180811,limit_forecast_days,7
+,,,q,__location,limit_calls,10000 calls/month
+,,,lang,__lang,,
+,,,days,7,,
 example1,current,http://example1/current.json,key,0000aaaa0000,limit_forecast_days,10
 ,,,q,__location,limit_calls,10000 calls/month
 ,,,lang,__lang,,

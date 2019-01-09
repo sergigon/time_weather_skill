@@ -150,6 +150,9 @@ In the first column specify the keys, and in the next column write the correspon
 #### extra_info
 List of extra info that can be useful for the code or for documentation purposes.
 
++ limit_forecast_days: Limit of forecast days of the source.
++ limit_calls: Limit calls.
+
 In the first column specify the keys, and in the next column write the corresponding values.
 
 ## ROS API

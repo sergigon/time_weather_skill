@@ -33,7 +33,7 @@ def csv_reader_params(filepath, source, forecast_type):
 	# If file does not exist
 	if(not SysOperations().path_exists(filepath)):
 		rospy.logwarn("Csv Reader Params ERROR: File does not exist")
-		return '', {}, {}
+		return -1, {}, {}
 
 	# Constants
 	SOURCE_H = 'source' # Name of the source header
@@ -111,7 +111,7 @@ def csv_reader_params(filepath, source, forecast_type):
 	# Source not found
 	if(source_row_start == -1):
 		rospy.logwarn("csv reader ERROR: Source not found")
-		return '', {}, {}
+		return -1, {}, {}
 
 	############ Search forecast type #############
 	# Searchs for the forecast type START         #

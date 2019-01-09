@@ -243,14 +243,13 @@ class Weather():
             return False
         '''
 
-    def _request_weather(self, location, forecast_type, date, info_required):
+    def _request_weather(self, location, forecast_type, date):
         """
         Get weather from local or URL sources, and save it if it success.
 
         @param location: City to get weather. Format: 'Madrid' or 'Madrid, Spain'.
-        @param forecast_type: 'forecast' or 'current'
+        @param forecast_type: 'forecast' or 'current'.
         @param date: Date for the weather.
-        @param info_required: Type of info_required needed.
 
         @return result: Final result.
         @return result_info_dic: Weather dictionary result.
@@ -283,12 +282,12 @@ class Weather():
                     if(forecast_type == 'current'):
                         pass
                 else: # Date NOT updated
-                    rospy.logwarn("Local request ERROR: File not updated")
+                    rospy.logwarn("Weather request ERROR: Local file not updated")
                 if(updated):
                     return local_result, local_result_info_dic
                 
             except KeyError:
-                rospy.logwarn("Local request ERROR: Key Error")
+                rospy.logwarn("Weather request ERROR: Key Error")
 
         '''
         if True:
@@ -313,14 +312,22 @@ class Weather():
 
         ################## Make URL requests #####################
         url_result, url_result_info_dic = -1, {}
+        params_filepath = self._data_path + self._PARAMS_FILENAME + '.csv'
         # Selects the source from the source list
         for source in self._SOURCE_LIST:
             print("Making URL request to: '" + source + "'")
 
             ############ Get params ############
             print(">> Getting params")
-            filepath = self._data_path + self._PARAMS_FILENAME + '.csv'
-            url, params, _ = csv_reader_params(filepath, source, forecast_type)
+            url, params, extra_info = csv_reader_params(params_filepath, source, forecast_type)
+            # Source not found in the csv
+            if(url == -1):
+                rospy.logwarn("Request Weather ERROR: No params found")
+                continue
+            ## Checks the limit forecast days ##
+            if((date < 0 or date >= int(extra_info['limit_forecast_days'])) and forecast_type == 'forecast'):
+                rospy.logwarn("Request Weather ERROR: Forecast day out of range (" + source + ": " + extra_info['limit_forecast_days'] + " limit forecast days), request denied")
+                continue # Jumps to the next source
 
             ########### Update params ##########
             # If the param value starts with   #
@@ -360,7 +367,6 @@ class Weather():
                 self._save_json(self._data_path, url_result_info_dic, extra_dic)
                 break # Stops the URL requests list loop
 
-
         return url_result, url_result_info_dic
 
     def _get_info(self, location, forecast_type, date, info_required):
@@ -396,14 +402,13 @@ class Weather():
         if('basic' in info_required_list): # Check if basic list is requested
             info_required_list = self._INFO_BASIC_LIST[forecast_type][:] # Replace the list with the basic list
 
-
-
         ################# Fill the result_info dictionary #################
         request = False # Indicates if a request has been done
 
         # Search all the info required
         for info_required_i in info_required_list:
             found = -1 # Indicates if info required has been found before making requests
+
             # ################ Take data from TimeAstral ################ #
             if(forecast_type == 'current' and info_required_i in self._TIMECLASS_LIST): # This info can be taken with TimeClass
                 city_name, _ = self._location(location) # # Get the city name from location variable
@@ -420,10 +425,11 @@ class Weather():
             if(found == -1): # Parameter not found with another source
                 # Make only ONE request
                 if(not request): # A request has not been done yet
-                    result, standard_weather_dic = self._request_weather(location, forecast_type, date, info_required) # Get the weather info
-                    request = True
-                    if(result == -1): # If there is a request error, it gets out
+                    result, standard_weather_dic = self._request_weather(location, forecast_type, date) # Get the weather info
+                    # If there is a request error, it gets out
+                    if(result == -1):
                         return result, {}
+                    request = True
 
                 # ##### Search the info in the standard_weather_dic ##### #
                 # Checks if info required exists in forecast_type list
@@ -484,8 +490,10 @@ if __name__ == '__main__':
         pkg_path = rospack.get_path(pkg_name) # Package path
 
         weather = Weather(pkg_path)
-        result, result_info = weather.manage_weather(['leganes, spain', 'current', '1', 'basic'])
-        print(result_info)
+        result, result_info = weather.manage_weather(['leganes, spain', 'forecast', '6', 'is_day'])
+        print('#######################')
+        print('result_info: ' + str(result_info))
+        print('result: ' + str(result))
 
 
     except rospy.ROSInterruptException:
