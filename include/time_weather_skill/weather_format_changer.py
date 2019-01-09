@@ -76,7 +76,7 @@ def source2standard(source, forecast_type, weather_dic):
 		# Current weather
 		if(forecast_type == 'current'):
 			
-			c_date = weather_dic['forecast']['forecastday'][0]['date']
+			c_date, _ = weather_dic['current']['last_updated'].split(' ')
 			c_temp_c = weather_dic['current']['temp_c']
 			c_is_day = weather_dic['current']['is_day']
 			c_precip_mm = weather_dic['current']['precip_mm']
