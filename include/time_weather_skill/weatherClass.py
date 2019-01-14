@@ -35,7 +35,7 @@ class Weather():
     _PARAMS_FILENAME = 'weather_sources_params' # Name of the file to store the sources params data
 
     # Lists
-    _SOURCE_LIST = ['ex', 'source1', 'source2'] # List of the sources
+    _SOURCE_LIST = ['apixu', 'source1', 'source2'] # List of the sources
     _UPDATE_HOURS = [23, 19, 14, 9, 4] # List of hours for current request
     _INFO_BASIC_LIST = {
         'current': ['date', 'temp_c', 'is_day', 'text', 'code', 'city_name', 'country_name', 'last_updated'], # Basic current list
@@ -325,7 +325,7 @@ class Weather():
                 rospy.logwarn("Request Weather ERROR: No params found")
                 continue
             ## Checks the limit forecast days ##
-            if((date < 0 or date >= int(extra_info['limit_forecast_days'])) and forecast_type == 'forecast'):
+            if(forecast_type == 'forecast' and (date < 0 or date >= int(extra_info['limit_forecast_days']))):
                 rospy.logwarn("Request Weather ERROR: Forecast day out of range (" + source + ": " + extra_info['limit_forecast_days'] + " limit forecast days), request denied")
                 continue # Jumps to the next source
 
@@ -495,7 +495,7 @@ if __name__ == '__main__':
         pkg_path = rospack.get_path(pkg_name) # Package path
 
         weather = Weather(pkg_path)
-        result, result_info = weather.manage_weather(['leganes, spain', 'forecast', '6', 'basic'])
+        result, result_info = weather.manage_weather(['london', 'forecast', 'tomorrow', 'basic'])
         print('#######################')
         print('result_info: ' + str(result_info))
         print('result: ' + str(result))

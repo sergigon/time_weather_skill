@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
 __author__ = "Sergio Gonzalez Diaz"
 __copyright__ = "Social Robots Group. Robotics Lab. University Carlos III of Madrid"
 __credits__ = ["Sergio Gonzalez Diaz"]
@@ -11,11 +12,11 @@ __email__ = "sergigon@ing.uc3m.es"
 __status__ = "Development"
 
 from skill.skill import Skill, ActionlibException, NATURAL
-from time_weather_skill.timeClass import Time # Time class
 from time_weather_skill.weatherClass import Weather # Weather class
 from time_weather_skill.general_functions import makeCA_info, makeCA_gesture_info # Voice communication CA functions
-from time_weather_skill.create_json import CreateJson # For creating and reading JSON files
+from time_weather_skill.sys_operations import SysOperations
 
+import rospkg
 import rospy
 import roslib
 import importlib
@@ -27,14 +28,13 @@ from std_msgs.msg import String, Empty
 from interaction_msgs.msg import CA
 import time_weather_skill.msg
 from common_msgs.msg import KeyValuePair
+from time_weather_skill.datetime_manager import DatetimeManager
 
 # Skill variables
 # Package name
 pkg_name = 'time_weather_skill'
 # Skill name (declare this only if the name is different of 'pkg_name')
 skill_name = "time_weather_skill"
-
-city_name_def = 'Madrid' # City by default
 
 class TimeWeatherSkill(Skill):
     """
@@ -47,6 +47,8 @@ class TimeWeatherSkill(Skill):
 
     _GOAL_MAX_SIZE = 5 # Max size of the goal
 
+    _CONDITIONS_FILENAME = 'english_conditions_data'
+
     def __init__(self):
         """
         Init method.
@@ -55,17 +57,15 @@ class TimeWeatherSkill(Skill):
         # class variables
         self._as = None # SimpleActionServer variable
         self._goal = "" # Goal a recibir
-        self._result_info_dic = {} # Dictionary container
 
-        ## common variables
-        self._city_name = city_name_def # City to find the weather
-        ## time variables
-        self._time_var = Time() # Time object
-        ## weather variables
-        self._weather = Weather() # Weather object
-        self._date = "" # "today"
-        self._info_required = "" # "basic"
-        self._display = "" # "000"
+        # Paths
+        rospack = rospkg.RosPack()
+        self._root_path = rospack.get_path(pkg_name) # Package path
+        self._data_path = self._root_path + '/data/' # Data path
+        self._images_path = self._root_path + '/data/images/' # Images path
+        
+        # SysOperations object
+        self._json_manager = SysOperations()
 
         # init the skill
         Skill.__init__(self, skill_name, NATURAL)
@@ -106,68 +106,119 @@ class TimeWeatherSkill(Skill):
             
         print("shutdown_msg_srv() called")
 
-    def manage_time(self, goal_vec):
+    def _text2num(self, text):
         """
-        Manager of the time class. It updates the result and result_info.
+        Transforms the text into the corresponding number and converts to int.
 
-        @param goal_vec: Vector of the goal.
+        @param text: string date to fix.
+
+        @return date: date fixed
         """
 
-        print("----- Chosen time -----")
+        if(text == ''):
+            text = '-1'
+        elif(text == 'today'):
+            text = '0'
+        elif(text == 'tomorrow'):
+            text = '1'
 
-        if(len(goal_vec)>=2): # If specified, it takes the city, if not, it uses the last city used
-            self._city_name = goal_vec[1] # Register time
-        else:
-            self._city_name = ''
+        date = int(text) # Converts to int
 
-        self._time_var._check_time(self._city_name) # Check time
+        return date
 
-        self._result.result = self._time_var._return_result() # Get result
-        self._result_info_dic = self._time_var._return_info() # Result_info = time info
 
-    def manage_display(self, display):
+
+    def _manage_display(self, forecast_type, date_i, display, weather_dic):
         """
-        Manager of the display. It updates the result and result_info.
-
+        Manager of the display.
+    
         @param display: String of the display goal.
+        @param weather_dic: Input weather dicionary.
         """
 
         ############# Manage displays ###############
         display_vec = list(display) # Divides goal by fields
-        self._screen = int(display_vec[0])
-        self._movement = int(display_vec[1])
-        self._voice = int(display_vec[2])
+        screen = int(display_vec[0])
+        movement = int(display_vec[1])
+        voice = int(display_vec[2])
         #############################################
 
+        # Initialize fields content
+        # Common
+        country_name, city_name, date, day, month, year, temp_c, avgtemp_c = '', '', '', '', '', '', '', ''
+        # Screen
+        code, is_day = '', 1 # By default it is day (for images)
+        # Voice
+        text = ''
+        # Params
+        date_i = self._text2num(date_i)
+
+        # Fill screen fields content
+        if 'country_name' in weather_dic:
+            country_name = weather_dic['country_name'] #
+        if 'city_name' in weather_dic:
+            city_name = weather_dic['city_name'] #
+        if 'date' in weather_dic:
+            date = weather_dic['date'] #
+            day = DatetimeManager(date).day()
+            month = DatetimeManager(date).month()
+            year = DatetimeManager(date).year()
+        if 'temp_c' in weather_dic:
+            temp_c = weather_dic['temp_c'] #
+        if 'avgtemp_c' in weather_dic:
+            avgtemp_c = weather_dic['avgtemp_c'] #
+        if 'code' in weather_dic:
+            code = weather_dic['code'] #
+        if 'is_day' in weather_dic:
+            is_day = weather_dic['is_day'] #
+        if 'text' in weather_dic:
+            text = weather_dic['text'] #
+
         ################# Screen ####################
-        if(self._screen == 1):
-            conditions_data = CreateJson() # Create object to read JSON
-            conditions_dic = conditions_data.load('english_conditions_data') # Load JSON
+        if(screen == 1):
+            ##################################################
+            # Info to show:                                  #
+            # + Current:                                     #
+            #     - country_name (show country name)         #
+            #     - city_name (show city name)               #
+            #     - date (show date)                         #
+            #     - day (show day)                           #
+            #     - month (show day)                         #
+            #     - year (show day)                          #
+            #     - temp_c (show temperature in celsius)     #
+            #     - code (show photo)                        #
+            #     - is_day (change photo if night)           #
+            # + Forecast:                                    #
+            #     - country_name (show country name)         #
+            #     - city_name (show city name)               #
+            #     - date (show date)                         #
+            #     - day (show day)                           #
+            #     - month (show day)                         #
+            #     - year (show day)                          #
+            #     - avgtemp_c (show temperature in celsius)  #
+            #     - code (show photo)                        #
+            ##################################################
+            print('Screen selected')
 
-            if(conditions_dic != -1): # JSON file found
-                code, icon, is_day, date, city_name, avg_temp_c = '', '', 1, '', '', '' # Initialize text variables
-                if 'code' in self._result_info_dic:
-                    code = self._result_info_dic['code'] # Get condition code
-                for n in conditions_dic: # Search the name of the icon, using the code
-                    if(n['code'] == code):
-                        icon = n['icon']
+            # Search weather icon
+            filepath = self._data_path + self._CONDITIONS_FILENAME + '.json'
+            conditions_dic = self._json_manager.load_json(filepath) # Load json
+            if(conditions_dic != -1): # Json file found
+                # Search the name of the icon, using the code
+                for condition in conditions_dic:
+                    if(condition['code'] == code):
+                        icon = condition['icon']
+                        print('Icon number: ' + str(icon))
                         break
-                if 'is_day' in self._result_info_dic:
-                    is_day = self._result_info_dic['is_day'] # Get day condition (for finding weather icon)
-                if 'date' in self._result_info_dic:
-                    date = self._result_info_dic['date'] # Get date
-                if 'city_name' in self._result_info_dic:
-                    city_name = self._result_info_dic['city_name'] # Get city name
-                if 'avg_temp_c' in self._result_info_dic:
-                    avg_temp_c = self._result_info_dic['avg_temp_c'] # Get average temperature
-                #print(code, icon, is_day, date, city_name, avg_temp_c)
-
-            else:
-                print('conditions_data JSON not found')
+                rospy.logwarn('[' + pkg_name + ']' + ' icon not found')
+            else: # Json file NOT found
+                rospy.logwarn('[' + pkg_name + ']' + '\'' + self._CONDITIONS_FILENAME + '\'' + ' not found')
+            print(country_name, city_name, date, temp_c, avgtemp_c, code)
         #############################################
 
         ################# Movement ##################
-        if(self._movement == 1):
+        if(movement == 1):
+            print('Movement selected')
             print('makeCA_gesture_info')
             ca_gesture_info = makeCA_gesture_info('alz_talking_03')
             self.ca_pub.publish(ca_gesture_info)
@@ -175,70 +226,67 @@ class TimeWeatherSkill(Skill):
         #############################################
 
         ################## Voice ####################
-        if(self._voice == 1):
-            print('voice')
-            weather_speech, date_speech, city_name_speech, text_speech, temp_speech, precip_speech = "", "", "", "", "", ""
-            for key in self._result_info_dic:
-                if(key == 'date'):
-                    date_vec = self._result_info_dic[key].split("-") # Divides date by year-month-day
-                    date_speech = "El dia " + str(date_vec[2]) + " del " + str(date_vec[1])
-               
-                if(key == 'city_name'):
-                    city_name_speech = "en " + str(self._result_info_dic[key]) + " "
-                
-                if(key == 'text'):
-                    text_speech = "estara " + str(self._result_info_dic[key]) + " "
-                
-                if(key == 'avg_temp_c'):
-                    temp_vec = str(self._result_info_dic[key]).split(".") # Divides temp: 11.4 -> 11 and 4
-                    temp_speech = "hara una temperatura de " + str(temp_vec[0]) + " coma " + str(temp_vec[1]) + " grados "
+        if(voice == 1):
+            ##################################################
+            # Info to show:                                  #
+            # + Current:                                     #
+            #     - city_name (show city name)               #
+            #     - date (show date)                         #
+            #     - temp_c (show temperature in celsius)     #
+            #     - text (show condition)                    #
+            # + Forecast:                                    #
+            #     - city_name (show city name)               #
+            #     - date (show date)                         #
+            #     - avgtemp_c (show temperature in celsius)  #
+            #     - text (show condition)                    #
+            ##################################################
+            print('Voice selected')
 
-                weather_speech = date_speech + city_name_speech + text_speech + temp_speech + precip_speech
+            date_speech, city_name_speech, condition_speech, temp_speech = '', '', '', ''
+
+            # Fill city_name speech
+            if(city_name != ''):
+                city_name_speech = 'en ' + str(city_name) + ' '
+            # Fill date speech
+            if(date != ''):
+                if(forecast_type == 'current'):
+                    date_speech = 'El tiempo de hoy '
+                elif(forecast_type == 'forecast'):
+                    if(date_i == 0):
+                        date_speech = 'La previsión para hoy '
+                    elif(date_i == 1):
+                        date_speech = 'La previsión para mañana '
+                    else:
+                        date_speech = 'La previsión para el día ' + str(day) + ' '
+                date_speech = str(date_speech) + str(city_name_speech) + 'es '
+
+            # Fill condition speech
+            if(text != ''):
+                '''
+                if(forecast_type == 'current' or (forecast_type == 'forecast' and date_i == 0)):
+                    condition_speech = 'es '
+                else:
+                    condition_speech = 'será '
+                '''
+                condition_speech = str(text) + ' '
+            # Fill temp speech
+            if(temp_c != '' or avgtemp_c != ''):
+                if(temp_c != ''):
+                    temp_vec = str(temp_c).split(".") # Divides temp: 11.4 -> 11 and 4
+                    temp_speech += "una temperatura de " + str(temp_vec[0]) + " coma " + str(temp_vec[1]) + " grados "
+                elif(avgtemp_c != ''):
+                    temp_vec = str(avgtemp_c).split(".") # Divides temp: 11.4 -> 11 and 4
+                    temp_speech += "una temperatura media de " + str(temp_vec[0]) + " coma " + str(temp_vec[1]) + " grados "
+
+            if(condition_speech != '' and temp_speech != ''):
+                condition_speech += 'y '
+
+            weather_speech = str(date_speech) + str(condition_speech) + str(temp_speech)
+            print(weather_speech)
             ca_info = makeCA_info(weather_speech)
             self.ca_pub.publish(ca_info)
             rospy.sleep(1)
         #############################################
-
-    def _manage_weather(self, goal_vec):
-        """
-        Manager of the weather class. It updates the result and result_info.
-        Examples:
-        madrid/forecast/tomorrow/basic/101
-        sydney/current/0/is_day/011
-
-        @param goal_vec: Vector of the goal.
-
-        @return result: Final result.
-        @return result_info_dic: Weather dictionary result.
-        """
-
-        if(len(goal_vec) >= self._GOAL_MAX_SIZE-1): # Check if all min fields are completed
-
-            ############## Check weather ################
-            self._city_name = goal_vec[1] # City name
-            self._forecast = goal_vec[2] # Forecast or current info
-            self._date = goal_vec[3] # Date
-            self._info_required = goal_vec[4] # Info wanted
-            
-            self._weather._update_source('apixu') # Choose a weather source
-            self._weather._check_weather(self._city_name, self._forecast, self._info_required, self._date) # Check weather in the specified city
-
-            # Empty the dictionary
-            self._result_info_dic = {}
-            # Fill result_dic and result
-            self._result.result = self._weather._return_result() # Get result
-            self._result_info_dic = self._weather._return_info() # Result_info = weather info
-            #############################################
-            if(self._result.result == -1):
-                return False
-            else:
-                return True
-
-        else:
-            print("Goal size not completed")
-            self._result.result = -1 # Fail
-            self._result_info_dic = {}
-            return -1, {}
 
     def execute_cb(self, goal):
         """
@@ -250,6 +298,7 @@ class TimeWeatherSkill(Skill):
         # default values (In progress)
         self._result.result = -1 # Error
         self._result.result_info = [] # Empty
+        result_info_dic = {} # Dictionary to fill result_info
         self._feedback.feedback = 0
 
         ############### Si la skill esta activa: ###################
@@ -257,33 +306,40 @@ class TimeWeatherSkill(Skill):
             print ("RUNNING...")
 
             try:
-                ######### Si el goal esta en estado Preempted (es
-                # decir, hay un goal en cola o se cancela el goal
-                # actual), activo la excepcion #####################
+                ############# State Preempted checking #############
+                # Si el goal esta en estado Preempted (es decir,   #
+                # hay un goal en cola o se cancela el goal         #
+                # actual), activo la excepcion                     #
+                ####################################################
                 if self._as.is_preempt_requested():
                     print("Preempt requested")
                     raise ActionlibException
                 #==================================================#
                 
-                ################# Proceso el goal ##################
+                ################ Processes the goal ################
                 goal_vec = goal.command.split("/") # Divides goal by fields
-
-                # Checks goal
-                ################### Weather ####################
-                weather = self._manage_weather(goal_vec)
-                if(weather == False): # Check if weather has been requested
-                    print("==== Weather ERROR ====")
-                    self._result.result = -1 # Fail
-                else:
-                    ################ Display ###################
-                    if(len(goal_vec) >= self._GOAL_MAX_SIZE): # Check if the display field is completed
-                        self.manage_display(goal_vec[self._GOAL_MAX_SIZE-1])
+                if(len(goal_vec) >= self._GOAL_MAX_SIZE-1): # Check if all fields (except display) are completed
+                    ################### Weather ####################
+                    location = goal_vec[0] # City name
+                    forecast_type = goal_vec[1] # Forecast or current info
+                    date = goal_vec[2] # Date
+                    info_required = goal_vec[3] # Info wanted
+                    # Get weather info
+                    self._result.result, result_info_dic = Weather(self._root_path)._get_info(location, forecast_type, date, info_required)
+                    if(self._result.result != 0): # Fail
+                        rospy.logerr('[%s] Weather ERROR ' % pkg_name)
                     else:
-                        print("Display not specified")
-                        self._result.result = -1 # Fail
-                    ############################################
-                    
-                ################################################
+                        if(len(goal_vec) >= self._GOAL_MAX_SIZE): # Check if all fields are completed
+                            ################ Display ################
+                            display = goal_vec[4] # Display info
+                            self._manage_display(forecast_type, date, display, result_info_dic)
+                        else:
+                            rospy.logwarn('[%s] Display not specified ' % pkg_name)
+
+                else:
+                    rospy.logerr('[%s] Goal size not completed ' % pkg_name)
+                    self._result.result = -1 # Fail
+                    result_info_dic = {}
 
                 #==================================================#
             
@@ -309,10 +365,10 @@ class TimeWeatherSkill(Skill):
         #### Envio del resultado y actualizacion del status del goal ###
         # Use the result_info dictionary for filling the result_info variable
         kvp_list = [] # Auxiliar list for the KeyValuePair values
-        for key in self._result_info_dic:
+        for key in result_info_dic:
             kvp = KeyValuePair()
             kvp.key = str(key)
-            kvp.value = str(self._result_info_dic[key])
+            kvp.value = str(result_info_dic[key])
             kvp_list.append(kvp)
 
         # Empty the result_info
@@ -342,7 +398,7 @@ class TimeWeatherSkill(Skill):
 if __name__ == '__main__':
     try:
         # start the node
-        rospy.init_node(skill_name)
+        rospy.init_node(skill_name, log_level=rospy.DEBUG)
         rospy.loginfo('[' + pkg_name + ': ' + skill_name + ']')
 
         # create and spin the node

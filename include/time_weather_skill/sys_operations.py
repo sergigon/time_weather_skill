@@ -92,7 +92,7 @@ class SysOperations():
 
 		@param path: Full file path.
 
-		@return: Return JSON data if file found. If not, return -1.
+		@return data: Return JSON data if file found. If not, return -1.
 		"""
 		rospy.logdebug('[Sys Operations]: ' + 'Loading' + filepath)
 

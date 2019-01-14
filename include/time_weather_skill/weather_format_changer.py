@@ -75,7 +75,6 @@ def source2standard(source, forecast_type, weather_dic):
 	elif(source == 'source2'):
 		# Current weather
 		if(forecast_type == 'current'):
-			
 			c_date, _ = weather_dic['current']['last_updated'].split(' ')
 			c_temp_c = weather_dic['current']['temp_c']
 			c_is_day = weather_dic['current']['is_day']
@@ -86,7 +85,6 @@ def source2standard(source, forecast_type, weather_dic):
 			
 		# Forecast weather
 		if(forecast_type == 'forecast'):
-			
 			for forecastday in weather_dic['forecast']['forecastday']:
 				f_date.append(forecastday['date'])
 				f_avgtemp_c.append(forecastday['day']['avgtemp_c'])
@@ -99,11 +97,8 @@ def source2standard(source, forecast_type, weather_dic):
 			f_forecast_days = len(weather_dic['forecast']['forecastday'])
 			
 		# Common parameters
-		
 		city_name = weather_dic['location']['name']
 		country_name = weather_dic['location']['country']
-		
-		
 
 	else:
 		rospy.logwarn('Weather Format Changer ERROR: ' + '\'' + source + '\' not found')

@@ -10,7 +10,7 @@ source2,current,http://api.apixu.com/v1/current.json,key,9838870ce6324daf95d1616
 ,,,q,__location,limit_calls,10000 calls/month
 ,,,lang,__lang,,
 ,,,days,7,,
-example1,current,http://example1/current.json,key,0000aaaa0000,limit_forecast_days,10
+example1,current,http://example1/current.json,key,0000aaaa0000,     ,10
 ,,,q,__location,limit_calls,10000 calls/month
 ,,,lang,__lang,,
 ,forecast,http://example1/forecast.json,key,0000aaaa0000,limit_forecast_days,10
