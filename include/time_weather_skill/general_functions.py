@@ -23,6 +23,50 @@ from common_msgs.msg import KeyValuePair as kvpa
 
 ######################################################################
 
+def location_divider(location):
+    """
+    Divide the location in city_name and country_name.
+
+    @param location: City to get weather. Format: 'Madrid' or 'Madrid, Spain'.
+
+    @return city_name: Name of the city.
+    @return country_name: Name of the country.
+    """
+
+    # Initialize variables
+    city_name, country_name = '', ''
+
+    # Checks if location has specified country
+    n_commas = location.find(',')
+    if(n_commas <= 0): # NOT specified country
+        city_name = location
+    else: # Specified country
+        city_name, country_name = location.split(",")
+        if(country_name[0] == ' '): # Removes space character if necessary
+            country_name = country_name[1:]
+
+    return city_name, country_name
+
+def date_text2num(text):
+    """
+    Transforms the text into the corresponding number and converts to int.
+
+    @param text: string date to fix.
+
+    @return date: int date fixed.
+    """
+
+    if(text == ''):
+        text = '-1'
+    elif(text == 'today'):
+        text = '0'
+    elif(text == 'tomorrow'):
+        text = '1'
+
+    date = int(text) # Converts to int
+
+    return date
+
 def makeCA_info(etts_text):
     now = rospy.get_rostime().nsecs
 

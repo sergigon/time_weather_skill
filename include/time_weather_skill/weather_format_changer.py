@@ -23,7 +23,7 @@ def source2standard(source, forecast_type, weather_dic):
 	"""
 
 	# Initialize variables
-	f_date, f_avgtemp_c, f_mintemp_c, f_maxtemp_c, f_totalprecip_mm, f_text, f_code = [], [], [], [], [], [], []
+	f_date, f_avgtemp_c, f_mintemp_c, f_maxtemp_c, f_totalprecip_mm, f_text, f_code, f_icon = [], [], [], [], [], [], [], []
 
 	###########################################################
 	############## HOW TO IMPLEMNT NEW SOURCE #################
@@ -53,6 +53,7 @@ def source2standard(source, forecast_type, weather_dic):
 		c_precip_mm = weather_dic['current']['precip_mm']
 		c_text = weather_dic['current']['condition']['text'].lower()
 		c_code = weather_dic['current']['condition']['code']
+		c_icon = weather_dic['current']['condition']['icon']
 		c_last_updated = weather_dic['current']['last_updated']
 
 		# Forecast weather
@@ -64,6 +65,7 @@ def source2standard(source, forecast_type, weather_dic):
 			f_totalprecip_mm.append(forecastday['day']['totalprecip_mm'])
 			f_text.append(forecastday['day']['condition']['text'].lower())
 			f_code.append(forecastday['day']['condition']['code'])
+			f_icon.append(forecastday['day']['condition']['icon'])
 		f_last_updated = weather_dic['current']['last_updated']
 		f_forecast_days = len(weather_dic['forecast']['forecastday'])
 
@@ -81,6 +83,7 @@ def source2standard(source, forecast_type, weather_dic):
 			c_precip_mm = weather_dic['current']['precip_mm']
 			c_text = weather_dic['current']['condition']['text'].lower()
 			c_code = weather_dic['current']['condition']['code']
+			c_icon = weather_dic['current']['condition']['icon']
 			c_last_updated = weather_dic['current']['last_updated']
 			
 		# Forecast weather
@@ -93,6 +96,7 @@ def source2standard(source, forecast_type, weather_dic):
 				f_totalprecip_mm.append(forecastday['day']['totalprecip_mm'])
 				f_text.append(forecastday['day']['condition']['text'].lower())
 				f_code.append(forecastday['day']['condition']['code'])
+				f_icon.append(forecastday['day']['condition']['icon'])
 			f_last_updated = weather_dic['current']['last_updated']
 			f_forecast_days = len(weather_dic['forecast']['forecastday'])
 			
@@ -128,6 +132,7 @@ def source2standard(source, forecast_type, weather_dic):
 			'precip_mm': c_precip_mm, # 0.2
 			'text': c_text, # 'Partly cloudy'
 			'code': c_code, # 1003
+			'icon': c_icon, # '//cdn.apixu.com/weather/64x64/day/266.png'
 			'last_updated': c_last_updated # '2018-11-08 17:45'
 		}
 		standard_weather_dic.update({'current': current}) # Saves data in standard_weather_dic
@@ -144,7 +149,8 @@ def source2standard(source, forecast_type, weather_dic):
 					'maxtemp_c': f_maxtemp_c[i], # 12.9
 					'totalprecip_mm': f_totalprecip_mm[i], # 0.04
 					'text': f_text[i], # 1240
-					'code': f_code[i] # 'Light rain shower'
+					'code': f_code[i], # 'Light rain shower'
+					'icon': f_icon[i], # '//cdn.apixu.com/weather/64x64/day/266.png'
 				})
 			i+=1
 		# Forecast weather

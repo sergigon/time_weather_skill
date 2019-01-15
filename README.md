@@ -101,7 +101,7 @@ Forecast parameters:
 
 Common parameters:
 + `'city_name'`: Name of the city ('Madrid')
-+ `'country_name'`: Name of the country ('Spain')
++ `'country_name'`: Name of the country ('United_Kingdom')
 
 Lists:
 + `'basic'`: Basic info. It includes the following data:
@@ -154,6 +154,23 @@ List of extra info that can be useful for the code or for documentation purposes
 + limit_calls: Limit calls.
 
 In the first column specify the keys, and in the next column write the corresponding values.
+
+## Introducing new info parameters
+Go to weather_format_changer.py file:
++ Add the new info parameters in the standard dictionary list.
++ Add the corresponding info parameters in the source dictionaries lists. If needed any variable list (for forecast mainly) initialize it at the beggining of the code.
+
+## Change info required lists
+Go to weatherClass.py file:
++ To change the content of the info required lists change the content of the _INFO_(LISTNAME)_LIST at the beginning of the class.
++ To add a new list create the new list with the name _INFO_(LISTNAME)_LIST at the beginning of the class and add the info parameters wanted. Remember to distinguish between 'forecast' and 'current'. Then in the _get_info method:
+
+```
+if('(listname)' in info_required_list): # Check if (listname) list is requested
+	info_required_list.remove('(listname)')
+	info_required_list.extend(self._INFO_(LISTNAME)_LIST[forecast_type][:]) # Replace the list with the (listname) list
+```
+
 
 ## ROS API
 

@@ -18,6 +18,7 @@ import copy
 import rospkg
 
 from time_weather_skill.sys_operations import SysOperations
+from time_weather_skill.general_functions import *
 from time_weather_skill.weather_format_changer import source2standard
 from time_weather_skill.datetime_manager import DatetimeManager
 from time_weather_skill.timeClass import TimeAstral
@@ -38,8 +39,8 @@ class Weather():
     _SOURCE_LIST = ['apixu', 'source1', 'source2'] # List of the sources
     _UPDATE_HOURS = [23, 19, 14, 9, 4] # List of hours for current request
     _INFO_BASIC_LIST = {
-        'current': ['date', 'temp_c', 'is_day', 'text', 'code', 'city_name', 'country_name', 'last_updated'], # Basic current list
-        'forecast': ['date', 'avgtemp_c', 'text', 'code', 'city_name', 'country_name', 'last_updated'] # Basic advanced list
+        'current': ['date', 'temp_c', 'is_day', 'text', 'code', 'city_name', 'country_name', 'last_updated', 'icon'], # Basic current list
+        'forecast': ['date', 'avgtemp_c', 'text', 'code', 'city_name', 'country_name', 'last_updated', 'icon'] # Basic advanced list
         }
     _INFO_ADVANCED_LIST = copy.deepcopy(_INFO_BASIC_LIST)
     _INFO_ADVANCED_LIST['current'].extend(['precip_mm']) # Advanced current list
@@ -59,7 +60,7 @@ class Weather():
 
         # Gets paths
         self._root_path = rootpath # Root path
-        self._data_path = self._root_path + '/data/' # Data path
+        #self._data_path = self._root_path + '/data/' # Data path
 
     def _save_json(self, path, input_dic, extra_dic={}):
         """
@@ -85,53 +86,11 @@ class Weather():
         print('Saving weather (' + filename + ')')
         self._json_manager.write_json(filepath, input_dic) # Write weather info into JSON file
 
-    def _location(self, location):
-        """
-        Divide the location in city_name and country_name.
-
-        @param location: City to get weather. Format: 'Madrid' or 'Madrid, Spain'.
-
-        @return city_name: Name of the city.
-        @return country_name: Name of the country.
-        """
-
-        # Initialize variables
-        city_name, country_name = '', ''
-
-        # Checks if location has specified country
-        n_commas = location.find(',')
-        if(n_commas <= 0): # NOT specified country
-            city_name = location
-        else: # Specified country
-            city_name, country_name = location.split(",")
-            if(country_name[0] == ' '): # Removes space character if necessary
-                country_name = country_name[1:]
-
-        return city_name, country_name
-
-    def _fix_date(self, date):
-        """
-        Fix the date and converts to int.
-
-        @param date: date to fix.
-
-        @return date: date fixed
-        """
-
-        if (date == 'today'):
-            date = '0'
-        elif (date == 'tomorrow'):
-            date = '1'
-
-        date = int(date) # Converts to int
-
-        return date
-
     def _URL_request(self, url_forecast, params):
         """
         URL request method.
 
-        @param params: Dictionary with the URL equest params.
+        @param params: Dictionary with the URL request params.
         
         @return result: Final result.
         @return result_info_dic: Weather dictionary result.
@@ -175,14 +134,14 @@ class Weather():
             filename = filename + '_' + country_name.lower().replace(' ', '_') 
 
         # Search json files in the data folder
-        list_json = self._json_manager.ls_json(self._data_path)
+        list_json = self._json_manager.ls_json(self._root_path)
 
         # Search file in the list
         filename_len = len(filename)
         for list_i in list_json:
             if(filename == list_i[:filename_len]):
                 filename = list_i[:-5] # Get filename without the '.json' string
-                filepath = self._data_path + filename + '.json'
+                filepath = self._root_path + filename + '.json'
                 # Check if JSON files exists
                 result_info_dic = self._json_manager.load_json(filepath) # Load json file
                 found = True
@@ -257,7 +216,7 @@ class Weather():
 
         # Initialize variables
         lang = 'es'
-        city_name, country_name = self._location(location) # Divide the location into city and country names
+        city_name, country_name = location_divider(location) # Divide the location into city and country names
 
         ################### Make local request ###################
         print("-- Making local request: " + city_name + ", " + country_name + ' --')
@@ -312,7 +271,7 @@ class Weather():
 
         ################## Make URL requests #####################
         url_result, url_result_info_dic = -1, {}
-        params_filepath = self._data_path + self._PARAMS_FILENAME + '.csv'
+        params_filepath = self._root_path + self._PARAMS_FILENAME + '.csv'
         # Selects the source from the source list
         for source in self._SOURCE_LIST:
             print("-- Making URL request to: '" + source + "' --")
@@ -369,7 +328,7 @@ class Weather():
                     'lang': lang
                 }
                 # Saves the content in a local file
-                self._save_json(self._data_path, url_result_info_dic, extra_dic)
+                self._save_json(self._root_path, url_result_info_dic, extra_dic)
                 return url_result, url_result_info_dic
 
         return -1, {}
@@ -397,15 +356,20 @@ class Weather():
         standard_weather_dic = {}
 
         # Converts to int the date for the result_info dictionary
-        date = self._fix_date(date)
+        date = date_text2num(date)
 
+        ####################### Info Required Lists #######################
         # Prepare info_required list
         info_required = info_required.replace(' ','') # Remove spaces from the string
         info_required_list = info_required.split(",") # Separate the goal in various parts
+        # Add new lists
         if('advanced' in info_required_list): # Check if advanced list is requested
-            info_required_list = self._INFO_ADVANCED_LIST[forecast_type][:] # Replace the list with the advanced list
+            info_required_list.remove('advanced')
+            info_required_list.extend(self._INFO_ADVANCED_LIST[forecast_type][:]) # Replace the list with the advanced list
         if('basic' in info_required_list): # Check if basic list is requested
-            info_required_list = self._INFO_BASIC_LIST[forecast_type][:] # Replace the list with the basic list
+            info_required_list.remove('basic')
+            info_required_list.extend(self._INFO_BASIC_LIST[forecast_type][:]) # Replace the list with the basic list
+        ###################################################################
 
         ################# Fill the result_info dictionary #################
         request = False # Indicates if a request has been done
@@ -416,7 +380,7 @@ class Weather():
 
             # ################ Take data from TimeAstral ################ #
             if(forecast_type == 'current' and info_required_i in self._TIMECLASS_LIST): # This info can be taken with TimeClass
-                city_name, _ = self._location(location) # # Get the city name from location variable
+                city_name, _ = location_divider(location) # # Get the city name from location variable
                 print('Searching \'' + info_required_i + '\' in TimeAstral: ' + city_name)
                 time_var = TimeAstral() # TimeAstral variable
                 found, data_time = time_var.get_info(city_name, info_required_i) # Get TimeAstral info

@@ -29,6 +29,7 @@ from interaction_msgs.msg import CA
 import time_weather_skill.msg
 from common_msgs.msg import KeyValuePair
 from time_weather_skill.datetime_manager import DatetimeManager
+from time_weather_skill.general_functions import *
 
 # Skill variables
 # Package name
@@ -106,28 +107,6 @@ class TimeWeatherSkill(Skill):
             
         print("shutdown_msg_srv() called")
 
-    def _text2num(self, text):
-        """
-        Transforms the text into the corresponding number and converts to int.
-
-        @param text: string date to fix.
-
-        @return date: date fixed
-        """
-
-        if(text == ''):
-            text = '-1'
-        elif(text == 'today'):
-            text = '0'
-        elif(text == 'tomorrow'):
-            text = '1'
-
-        date = int(text) # Converts to int
-
-        return date
-
-
-
     def _manage_display(self, forecast_type, date_i, display, weather_dic):
         """
         Manager of the display.
@@ -151,7 +130,7 @@ class TimeWeatherSkill(Skill):
         # Voice
         text = ''
         # Params
-        date_i = self._text2num(date_i)
+        date_i = date_text2num(date_i)
 
         # Fill screen fields content
         if 'country_name' in weather_dic:
@@ -325,7 +304,7 @@ class TimeWeatherSkill(Skill):
                     date = goal_vec[2] # Date
                     info_required = goal_vec[3] # Info wanted
                     # Get weather info
-                    self._result.result, result_info_dic = Weather(self._root_path)._get_info(location, forecast_type, date, info_required)
+                    self._result.result, result_info_dic = Weather(self._data_path)._get_info(location, forecast_type, date, info_required)
                     if(self._result.result != 0): # Fail
                         rospy.logerr('[%s] Weather ERROR ' % pkg_name)
                     else:
