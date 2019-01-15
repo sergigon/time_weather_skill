@@ -51,7 +51,7 @@ def source2standard(source, forecast_type, weather_dic):
 		c_temp_c = weather_dic['current']['temp_c']
 		c_is_day = weather_dic['current']['is_day']
 		c_precip_mm = weather_dic['current']['precip_mm']
-		c_text = weather_dic['current']['condition']['text']
+		c_text = weather_dic['current']['condition']['text'].lower()
 		c_code = weather_dic['current']['condition']['code']
 		c_last_updated = weather_dic['current']['last_updated']
 
@@ -62,7 +62,7 @@ def source2standard(source, forecast_type, weather_dic):
 			f_mintemp_c.append(forecastday['day']['mintemp_c'])
 			f_maxtemp_c.append(forecastday['day']['maxtemp_c'])
 			f_totalprecip_mm.append(forecastday['day']['totalprecip_mm'])
-			f_text.append(forecastday['day']['condition']['text'])
+			f_text.append(forecastday['day']['condition']['text'].lower())
 			f_code.append(forecastday['day']['condition']['code'])
 		f_last_updated = weather_dic['current']['last_updated']
 		f_forecast_days = len(weather_dic['forecast']['forecastday'])
@@ -79,7 +79,7 @@ def source2standard(source, forecast_type, weather_dic):
 			c_temp_c = weather_dic['current']['temp_c']
 			c_is_day = weather_dic['current']['is_day']
 			c_precip_mm = weather_dic['current']['precip_mm']
-			c_text = weather_dic['current']['condition']['text']
+			c_text = weather_dic['current']['condition']['text'].lower()
 			c_code = weather_dic['current']['condition']['code']
 			c_last_updated = weather_dic['current']['last_updated']
 			
@@ -91,7 +91,7 @@ def source2standard(source, forecast_type, weather_dic):
 				f_mintemp_c.append(forecastday['day']['mintemp_c'])
 				f_maxtemp_c.append(forecastday['day']['maxtemp_c'])
 				f_totalprecip_mm.append(forecastday['day']['totalprecip_mm'])
-				f_text.append(forecastday['day']['condition']['text'])
+				f_text.append(forecastday['day']['condition']['text'].lower())
 				f_code.append(forecastday['day']['condition']['code'])
 			f_last_updated = weather_dic['current']['last_updated']
 			f_forecast_days = len(weather_dic['forecast']['forecastday'])

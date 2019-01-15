@@ -75,7 +75,7 @@ class Weather():
         """
         
         # Define filename
-        filename = self._WEATHER_FILENAME + '_' + input_dic['common']['city_name'].lower() + '_' +  input_dic['common']['country_name'].lower()
+        filename = self._WEATHER_FILENAME + '_' + input_dic['common']['city_name'].lower().replace(' ', '_')  + '_' +  input_dic['common']['country_name'].lower().replace(' ', '_') 
         filepath = path + filename + '.json'
 
         # Add extra info
@@ -170,9 +170,9 @@ class Weather():
 
         # File to search (Format ex: 'weather_madrid_spain.json')
         filename = self._WEATHER_FILENAME
-        filename = filename + '_' + city_name.lower()
+        filename = filename + '_' + city_name.lower().replace(' ', '_') 
         if (country_name != ''): # Country specified
-            filename = filename + '_' + country_name.lower()
+            filename = filename + '_' + country_name.lower().replace(' ', '_') 
 
         # Search json files in the data folder
         list_json = self._json_manager.ls_json(self._data_path)
