@@ -11,6 +11,7 @@ __email__ = "sergigon@ing.uc3m.es"
 __status__ = "Development"
 
 import rospy
+from time_weather_skill.datetime_manager import DatetimeManager
 
 def source2standard(source, forecast_type, weather_dic):
 	"""
@@ -72,6 +73,39 @@ def source2standard(source, forecast_type, weather_dic):
 		# Common parameters
 		city_name = weather_dic['location']['name']
 		country_name = weather_dic['location']['country']
+
+	######## OpenWeatherMap #########
+	elif(source == 'openweathermap'):
+		# Current weather
+		if(forecast_type == 'current'):
+			c_date = weather_dic['dt']
+			c_temp_c = weather_dic['main']['temp']
+			c_is_day = '__NOT_GIVEN'
+			c_precip_mm = '__IN_PROGRESS'
+			c_text = weather_dic['weather'][0]['description'].lower()
+			c_code = weather_dic['weather'][0]['id']
+			c_icon = weather_dic['weather'][0]['icon']
+			c_last_updated = '__IN_PROGRESS'
+			city_name = weather_dic['name']
+			country_name = weather_dic['sys']['country']
+			
+		# Forecast weather
+		if(forecast_type == 'forecast'):
+			for forecastday in weather_dic['dt_text']:
+				#if(forecastday ):
+				f_date.append(forecastday['date'])
+				f_avgtemp_c.append(forecastday['day']['avgtemp_c'])
+				f_mintemp_c.append(forecastday['day']['mintemp_c'])
+				f_maxtemp_c.append(forecastday['day']['maxtemp_c'])
+				f_totalprecip_mm.append(forecastday['day']['totalprecip_mm'])
+				f_text.append(forecastday['day']['condition']['text'].lower())
+				f_code.append(forecastday['day']['condition']['code'])
+				f_icon.append(forecastday['day']['condition']['icon'])
+			f_last_updated = weather_dic['current']['last_updated']
+			f_forecast_days = len(weather_dic['forecast']['forecastday'])
+			city_name = weather_dic['city']['coord']['name']
+			country_name = weather_dic['city']['country']
+
 
 	########### Source2 ###########
 	elif(source == 'source2'):

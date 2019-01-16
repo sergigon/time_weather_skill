@@ -23,7 +23,7 @@ class DatetimeManager():
 
         # Initialize variables
         self._date, self._year, self._month, self._day = '', '', '', ''
-        self._time, self._hour, self._min = '', '', ''
+        self._time, self._hour, self._min, self._sec = '', '', '', ''
 
         if(datetime != -1):
             self.manage_datetime(datetime)
@@ -43,7 +43,7 @@ class DatetimeManager():
 
         # Initialize variables
         self._date, self._year, self._month, self._day = '', '', '', ''
-        self._time, self._hour, self._min = '', '', ''
+        self._time, self._hour, self._min, self._sec = '', '', '', ''
         date_check, time_check = False, False
 
         # Checks if exists date and time
@@ -62,7 +62,11 @@ class DatetimeManager():
         if(self._date != ''):
             self._year, self._month, self._day = self._date.split('-')
         if(self._time != ''):
-            self._hour, self._min = self._time.split(':')
+            aux_vec = self._time.split(':')
+            if(len(aux_vec) == 2):
+                self._hour, self._min = aux_vec[0], aux_vec[1]
+            if(len(aux_vec) == 3):
+                self._hour, self._min, self._sec = aux_vec[0], aux_vec[1], aux_vec[2]
 
     def date(self):
         return self._date
@@ -114,6 +118,15 @@ class DatetimeManager():
             return -1
         else:
             return int(self._min)
+
+    def sec(self):
+        return self._sec
+
+    def sec_int(self):
+        if(self._sec == ''):
+            return -1
+        else:
+            return int(self._sec)
 
 if __name__ == '__main__':
 

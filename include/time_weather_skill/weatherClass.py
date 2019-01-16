@@ -24,6 +24,12 @@ from time_weather_skill.datetime_manager import DatetimeManager
 from time_weather_skill.timeClass import TimeAstral
 from time_weather_skill.csv_reader import csv_reader_params
 
+class InvalidKey(Exception):
+    pass
+class GeneralError(Exception):
+    pass
+
+
 class Weather():
 
     """
@@ -36,7 +42,8 @@ class Weather():
     _PARAMS_FILENAME = 'weather_sources_params' # Name of the file to store the sources params data
 
     # Lists
-    _SOURCE_LIST = ['apixu', 'source1', 'source2'] # List of the sources
+    #_SOURCE_LIST = ['apixu', 'openweathermap', 'source1', 'source2'] # List of the sources
+    _SOURCE_LIST = ['openweathermap', 'apixu', 'source1', 'source2'] # List of the sources
     _UPDATE_HOURS = [23, 19, 14, 9, 4] # List of hours for current request
     _INFO_BASIC_LIST = {
         'current': ['date', 'temp_c', 'is_day', 'text', 'code', 'city_name', 'country_name', 'last_updated', 'icon'], # Basic current list
@@ -86,11 +93,12 @@ class Weather():
         print('Saving weather (' + filename + ')')
         self._json_manager.write_json(filepath, input_dic) # Write weather info into JSON file
 
-    def _URL_request(self, url_forecast, params):
+    def _URL_request(self, url, params):
         """
         URL request method.
-
-        @param params: Dictionary with the URL request params.
+		
+		@param url: String with the url.
+        @param params: Dictionary with the url request params.
         
         @return result: Final result.
         @return result_info_dic: Weather dictionary result.
@@ -98,17 +106,35 @@ class Weather():
 
         # Make URL request
         try:
-            r = requests.get(url_forecast, params = params)
             # Get the data from the URL in JSON format
+            r = requests.get(url, params = params)
+            # Error requests
+            ##### OpenWeatherMap #####
+            if 'cod' in r.json():
+                if (r.json()['cod'] == 401): # Invalid Key
+                    raise InvalidKey(r.json()['message'])
+
+            ##### Apixu #####
             if 'error' in r.json(): # ERROR in the request
-            # Print the error
-                rospy.logwarn('URL request ERROR: ' + r.json()['error']['message'])
-                return -1, {}
-            else: # NO error in the request
-                print('URL request succeded')
-                return 0, r.json()
-        except:
-            rospy.logwarn("URL request ERROR: Connection ERROR")
+                if (r.json()['error']['code'] == 2006): # Invalid key
+                    raise InvalidKey(r.json()['error']['message'])
+                else: # General error
+                    raise GeneralError(r.json()['error']['message'])
+
+            ### NO errors in the request ###
+            print('URL request succeded')
+            return 0, r.json()
+
+        except InvalidKey as e:
+            rospy.logwarn('[weatherClass] URL request ERROR: Invalid Key (' + str(e) + ')')
+            return -1, {}
+
+        except requests.exceptions.ConnectionError as e:
+            rospy.logwarn("[weatherClass] URL request ERROR: Connection ERROR: " + str(e))
+            return -1, {}
+
+        except GeneralError as e:
+            rospy.logwarn("[weatherClass] URL request ERROR: General ERROR: " + str(e))
             return -1, {}
 
     def _local_request(self, city_name, country_name = ''):
@@ -223,7 +249,8 @@ class Weather():
         local_result, local_result_info_dic = self._local_request(city_name, country_name)
 
         # ############### Local request success ################ #
-        if(local_result == 0):
+        #if(local_result == 0):
+        if(False):
             try:
                 # ######### Check if local data is updated ######### #
                 # Manage last_update variable datatime
@@ -302,6 +329,7 @@ class Weather():
 
             ############# Request ##############
             url_result, url_result_info_dic = self._URL_request(url, params)
+            rospy.logdebug('[weatherClass] url_result_info_dic: ' + str(url_result_info_dic))
 
             ####### Request success #######
             if(url_result == 0): # URL request success

@@ -120,25 +120,26 @@ Each number corresponds to one variable:
 ## Introducing new weather sources
 ### Local sources
 ### Online sources
+#### Parameters csv table
 To make url requests to new sources, there must be some parameters that have to be specified. Each url source need different parameters.
 
 These parameters must be modified in the `weather_sources_params.csv`.
 
 At the end of the table there are **two examples**.
 
-#### source
+##### source
 Name given to the new source. It must be at the **beginning** of the new rows. created.
-#### forecast_type
+##### forecast_type
 Used to specify the 'current' or 'forecast' parameters.
 
 Some sources make a distinction when making the requests between current weather or forecast. To that end this column allows to specify different parameters depending on it.
 
 If the source only needs one only request for both 'current' and 'forecast', then leave it blank.
 
-#### url
+##### url
 Url path for making the request.
 
-#### params
+##### params
 List of parameters needed to make the request.
 
 In the first column specify the keys, and in the next column write the corresponding values.
@@ -147,13 +148,17 @@ In the first column specify the keys, and in the next column write the correspon
 + `__location`: location specified in the code
 + `__lang`: languaje specified in the code
 
-#### extra_info
+##### extra_info
 List of extra info that can be useful for the code or for documentation purposes.
 
 + limit_forecast_days: Limit of forecast days of the source.
 + limit_calls: Limit calls.
 
 In the first column specify the keys, and in the next column write the corresponding values.
+
+#### Error requests
+Go to weatherClass.py:
+	+ Go to Weather class and go to the _URL_request() method. Add the exceptions wanted.
 
 ## Introducing new info parameters
 Go to weather_format_changer.py file:
