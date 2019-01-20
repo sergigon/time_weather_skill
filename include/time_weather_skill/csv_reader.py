@@ -32,7 +32,7 @@ def csv_reader_params(filepath, source, forecast_type):
 
 	# If file does not exist
 	if(not SysOperations().path_exists(filepath)):
-		rospy.logwarn("Csv Reader Params ERROR: File does not exist")
+		rospy.logwarn("[Csv Reader] Csv Reader Params ERROR: File does not exist")
 		return -1, {}, {}
 
 	# Constants
@@ -110,7 +110,7 @@ def csv_reader_params(filepath, source, forecast_type):
 
 	# Source not found
 	if(source_row_start == -1):
-		rospy.logwarn('csv reader ERROR: Source \'' + source + '\' not found')
+		rospy.logwarn('[Csv Reader] Csv Reader Params ERROR: Source \'' + source + '\' not found')
 		return -1, {}, {}
 
 	############ Search forecast type #############
@@ -157,22 +157,89 @@ def csv_reader_params(filepath, source, forecast_type):
 
 	return url, params, extra_info # Info not found
 
+def csv_reader_conditions(filepath, source, source_code, info_requested):
+	"""
+	Reads a weather csv and returns the info given certain parameters.
+	
+	@param filepath: Full file path.
+	@param source: Name of the source to get the condition code.
+	@param source_code: Int source code used.
+	@param info_requested: Information requested.
+
+	@return result: Result of the request.
+	"""
+
+	# Add '_code' to the source name
+	source = source + '_code'
+	# Transforms the source code in string to make the search
+	source_code = str(source_code)
+
+	# If file does not exist
+	if(not SysOperations().path_exists(filepath)):
+		rospy.logwarn("[Csv Reader] Csv Reader Conditions ERROR: File does not exist")
+		return -1 # Fail (-1)
+
+	################## Open csv ##################
+	with open(filepath) as csvfile:
+		csv_reader = csv.reader(csvfile, delimiter=',')
+
+		############ Find csv headers ############
+		source_code_h_col = -1 # Source Code column
+		info_requested_h_col = -1 # Info Requested column
+
+		row_n=-1
+		for row in csv_reader:
+			row_n+=1
+			print row
+			# Search the headers columns
+			if(row_n == 0):
+				col_n=-1
+				for cell in row:
+					col_n+=1
+					if(cell == source): # Source Code column
+						source_code_h_col = col_n
+					if(cell == info_requested): # Info Requested column
+						info_requested_h_col = col_n
+				continue
+			# Search the info requested
+			cell = row[source_code_h_col].replace(' ','') # Remove spaces from the string
+			cell = cell.split(",") # Separate the string if needed
+			for cell_i in cell:
+				if (cell_i == source_code): # Code found
+					rospy.logdebug("[Csv Reader] Code '" + str(source_code) + "' from '" + source + "' found: " + str(row[info_requested_h_col]))
+					return row[info_requested_h_col]
+
+	rospy.logerr("[Csv Reader] Csv Reader Conditions ERROR: Code '" + str(source_code) + "' from '" + source + "' not found")
+	return -1
+
 
 if __name__ == '__main__':
 	print("[csv_reader]: __main__")
 	rospy.init_node('my_node', log_level=rospy.DEBUG)
-	# Variables
-	filename = 'weather_sources_params'
-	source = 'apixu'
-	forecast_type = 'current'
-	pkg_name = "time_weather_skill"
 
+	pkg_name = "time_weather_skill"
 	# rospkg object
 	rospack = rospkg.RosPack()
 	# Get paths
 	pkg_path = rospack.get_path(pkg_name) # Package path
 	data_path = pkg_path + '/data/' # Data path
-	csv_file = data_path + filename + '.csv'
 
+	#___________csv_reader_params___________
+	'''
+	# Variables
+	filename = 'weather_sources_params'
+	source = 'apixu'
+	forecast_type = 'current'
+	# Get paths
+	csv_file = data_path + filename + '.csv'
+	# Get info
 	print("INPUT: " + source + ', ' + forecast_type)
 	print(csv_reader_params(csv_file, source, forecast_type))
+	'''
+
+	#___________csv_reader_conditions___________
+	# Get paths
+	
+	filepath = data_path + 'conditions_codes_standard.csv'
+	# Get info
+	print(csv_reader_conditions(filepath, 'openweathermap', '503', 'standard_icon'))

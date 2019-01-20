@@ -22,13 +22,13 @@ from time_weather_skill.general_functions import *
 from time_weather_skill.weather_format_changer import source2standard
 from time_weather_skill.datetime_manager import DatetimeManager
 from time_weather_skill.timeClass import TimeAstral
-from time_weather_skill.csv_reader import csv_reader_params
+from time_weather_skill.csv_reader import *
 
+# Exceptions
 class InvalidKey(Exception):
     pass
 class GeneralError(Exception):
     pass
-
 
 class Weather():
 
@@ -46,8 +46,8 @@ class Weather():
     _SOURCE_LIST = ['openweathermap', 'apixu', 'source1', 'source2'] # List of the sources
     _UPDATE_HOURS = [23, 19, 14, 9, 4] # List of hours for current request
     _INFO_BASIC_LIST = {
-        'current': ['date', 'temp_c', 'is_day', 'text', 'code', 'city_name', 'country_name', 'last_updated', 'icon'], # Basic current list
-        'forecast': ['date', 'avgtemp_c', 'text', 'code', 'city_name', 'country_name', 'last_updated', 'icon'] # Basic advanced list
+        'current': ['date', 'temp_c', 'is_day', 'text', 'code', 'city_name', 'country_name', 'last_updated', 'icon', 'source'], # Basic current list
+        'forecast': ['date', 'avgtemp_c', 'text', 'code', 'city_name', 'country_name', 'last_updated', 'icon', 'source'] # Basic advanced list
         }
     _INFO_ADVANCED_LIST = copy.deepcopy(_INFO_BASIC_LIST)
     _INFO_ADVANCED_LIST['current'].extend(['precip_mm']) # Advanced current list
@@ -83,7 +83,7 @@ class Weather():
         """
         
         # Define filename
-        filename = self._WEATHER_FILENAME + '_' + input_dic['common']['city_name'].lower().replace(' ', '_')  + '_' +  input_dic['common']['country_name'].lower().replace(' ', '_') 
+        filename = self._WEATHER_FILENAME + '_' + input_dic['common']['city_name'].lower().replace(' ', '-')  + '_' +  input_dic['common']['country_name'].lower().replace(' ', '-') 
         filepath = path + filename + '.json'
 
         # Add extra info
@@ -155,9 +155,9 @@ class Weather():
 
         # File to search (Format ex: 'weather_madrid_spain.json')
         filename = self._WEATHER_FILENAME
-        filename = filename + '_' + city_name.lower().replace(' ', '_') 
+        filename = filename + '_' + city_name.lower().replace(' ', '-') 
         if (country_name != ''): # Country specified
-            filename = filename + '_' + country_name.lower().replace(' ', '_') 
+            filename = filename + '_' + country_name.lower().replace(' ', '-') 
 
         # Search json files in the data folder
         list_json = self._json_manager.ls_json(self._root_path)

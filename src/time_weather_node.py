@@ -15,6 +15,9 @@ from skill.skill import Skill, ActionlibException, NATURAL
 from time_weather_skill.weatherClass import Weather # Weather class
 from time_weather_skill.general_functions import makeCA_info, makeCA_gesture_info # Voice communication CA functions
 from time_weather_skill.sys_operations import SysOperations
+from time_weather_skill.datetime_manager import DatetimeManager
+from time_weather_skill.general_functions import *
+from time_weather_skill.csv_reader import *
 
 import rospkg
 import rospy
@@ -28,8 +31,6 @@ from std_msgs.msg import String, Empty
 from interaction_msgs.msg import CA
 import time_weather_skill.msg
 from common_msgs.msg import KeyValuePair
-from time_weather_skill.datetime_manager import DatetimeManager
-from time_weather_skill.general_functions import *
 
 # Skill variables
 # Package name
@@ -48,7 +49,12 @@ class TimeWeatherSkill(Skill):
 
     _GOAL_MAX_SIZE = 5 # Max size of the goal
 
-    _CONDITIONS_FILENAME = 'english_conditions_data'
+    _CONDITIONS_FILENAME = 'conditions_codes_standard'
+
+    # Node constants
+    _ICON_OBTENTION = 0 # Determines the obetention of icons (0: Internet, 1: Local)
+    _LANG = 'es' # Language for the conditions
+    _COUNTRY = 'es' # Country code (ISO 3166, 2)
 
     def __init__(self):
         """
@@ -63,10 +69,7 @@ class TimeWeatherSkill(Skill):
         rospack = rospkg.RosPack()
         self._root_path = rospack.get_path(pkg_name) # Package path
         self._data_path = self._root_path + '/data/' # Data path
-        self._images_path = self._root_path + '/data/images/' # Images path
-        
-        # SysOperations object
-        self._json_manager = SysOperations()
+        self._icons_path = self._root_path + '/data/weather_icons/64x64/' # Icons path
 
         # init the skill
         Skill.__init__(self, skill_name, NATURAL)
@@ -126,7 +129,7 @@ class TimeWeatherSkill(Skill):
         # Common
         country_name, city_name, date, day, month, year, temp_c, avgtemp_c = '', '', '', '', '', '', '', ''
         # Screen
-        code, is_day = '', 1 # By default it is day (for images)
+        code, icon, is_day = '', '', 1 # By default it is day (for images)
         # Voice
         text = ''
         # Params
@@ -146,12 +149,12 @@ class TimeWeatherSkill(Skill):
             temp_c = weather_dic['temp_c'] #
         if 'avgtemp_c' in weather_dic:
             avgtemp_c = weather_dic['avgtemp_c'] #
-        if 'code' in weather_dic:
-            code = weather_dic['code'] #
+        if 'icon' in weather_dic:
+            icon = weather_dic['icon'] #
         if 'is_day' in weather_dic:
             is_day = weather_dic['is_day'] #
         if 'text' in weather_dic:
-            text = weather_dic['text'] #
+            text = weather_dic['text'] # 
 
         ################# Screen ####################
         if(screen == 1):
@@ -166,6 +169,7 @@ class TimeWeatherSkill(Skill):
             #     - year (show day)                          #
             #     - temp_c (show temperature in celsius)     #
             #     - code (show photo)                        #
+            #     - source (needed to make code conversion)  #
             #     - is_day (change photo if night)           #
             # + Forecast:                                    #
             #     - country_name (show country name)         #
@@ -176,23 +180,22 @@ class TimeWeatherSkill(Skill):
             #     - year (show day)                          #
             #     - avgtemp_c (show temperature in celsius)  #
             #     - code (show photo)                        #
+            #     - source (needed to make code conversion)  #
             ##################################################
             print('Screen selected')
 
-            # Search weather icon
-            filepath = self._data_path + self._CONDITIONS_FILENAME + '.json'
-            conditions_dic = self._json_manager.load_json(filepath) # Load json
-            if(conditions_dic != -1): # Json file found
-                # Search the name of the icon, using the code
-                for condition in conditions_dic:
-                    if(condition['code'] == code):
-                        icon = condition['icon']
-                        print('Icon number: ' + str(icon))
-                        break
-                rospy.logwarn('[' + pkg_name + ']' + ' icon not found')
-            else: # Json file NOT found
-                rospy.logwarn('[' + pkg_name + ']' + '\'' + self._CONDITIONS_FILENAME + '\'' + ' not found')
-            print(country_name, city_name, date, temp_c, avgtemp_c, code)
+            # Searchs the icon image in local
+            if(self._ICON_OBTENTION == 1):
+                if ('code' in weather_dic and 'source' in weather_dic):
+                    code = weather_dic['code'] #
+                    source = weather_dic['source'] #
+                    # Search weather icon (apixu json conditions)
+                    conditions_path = self._data_path + self._CONDITIONS_FILENAME + '.csv'
+                    result = csv_reader_conditions(conditions_path, source, code, 'standard_icon')
+                    if (result != -1):
+                        icon = self._icons_path + ('day/' if (is_day == 1) else 'night/') + str(result) + '.png'
+
+            print(country_name, city_name, date, temp_c, avgtemp_c, code, icon)
         #############################################
 
         ################# Movement ##################

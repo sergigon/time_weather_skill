@@ -1,0 +1,49 @@
+standard_condition,standard_code,apixu_code,openweathermap_code,standard_icon
+Clear sky,100,1000,800,113
+Partly cloudy,101,1003,801,116
+Cloudy,102,1006,802,119
+Overcast clouds,103,1009,"803, 804",122
+Mist,110,1030,701,143
+Fog,111,1135,"711, 721, 731, 741, 751, 761, 762, 771, 781",248
+Freezing fog,112,1147,-,260
+Thundery outbreaks possible,200,1087,210,200
+Patchy light rain with thunder,201,1273,"200, 211, 230",386
+Moderate or heavy rain with thunder,202,1276,"201, 202, 212, 221, 231, 232",389
+Patchy light snow with thunder,203,1279,-,392
+Moderate or heavy snow with thunder,204,1282,-,395
+Patchy light drizzle,300,1150,"300, 310",263
+Light drizzle,301,1153,"301, 311, 313, 321",266
+Patchy freezing drizzle possible,302,1072,-,185
+Freezing drizzle,303,1168,-,281
+Heavy freezing drizzle,304,1171,"302, 312, 314",284
+Patchy rain possible,401,1063,-,176
+Patchy light rain,402,1180,-,293
+Light rain,403,1183,500,296
+Moderate rain at times,404,1186,-,299
+Moderate rain,405,1189,501,302
+Heavy rain at times,406,1192,-,305
+Heavy rain,407,1195,"502, 503, 504",308
+Light freezing rain,410,1198,-,311
+Moderate or heavy freezing rain,411,1201,511,314
+Light rain shower,420,1240,520,353
+Moderate or heavy rain shower,421,1243,"521, 522",356
+Torrential rain shower,423,1246,531,359
+Patchy snow possible,500,1066,-,179
+Blowing snow,501,1114,-,227
+Blizzard,502,1117,-,230
+Patchy light snow,503,1210,-,323
+Light snow,504,1213,600,326
+Patchy moderate snow,505,1216,-,329
+Moderate snow,506,1219,601,332
+Patchy heavy snow,507,1222,-,335
+Heavy snow,508,1225,602,338
+Ice pellets,510,1237,-,350
+Light snow showers,511,1255,620,368
+Moderate or heavy snow showers,512,1258,"621, 622",371
+Light showers of ice pellets,513,1261,-,374
+Moderate or heavy showers of ice pellets,514,1264,-,377
+Patchy sleet possible,520,1069,-,182
+Light sleet,521,1204,-,317
+Moderate or heavy sleet,522,1207,"611, 615",320
+Light sleet showers,523,1249,-,362
+Moderate or heavy sleet showers,524,1252,"612, 616",365
