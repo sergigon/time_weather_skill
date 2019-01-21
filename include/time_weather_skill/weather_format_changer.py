@@ -11,8 +11,16 @@ __email__ = "sergigon@ing.uc3m.es"
 __status__ = "Development"
 
 import rospy
+import rospkg
 import datetime
+import pytz
+from tzwhere import tzwhere
 from time_weather_skill.datetime_manager import DatetimeManager
+from time_weather_skill.csv_reader import *
+
+LOCAL_COUNTRY = 'es'
+LOCAL_TIMEZONE = 'Europe/Madrid'
+# datetime.datetime.fromtimestamp(1547575200, tz=pytz.timezone('Europe/Madrid'))
 
 def source2standard(source, forecast_type, weather_dic):
 	"""
@@ -24,11 +32,13 @@ def source2standard(source, forecast_type, weather_dic):
 	@return standard_weather_dic: Standard output weather dictionary.
 	"""
 
-	# Datetime object
-	dt = datetime
-
-	# Initialize variables
-	f_date, f_avgtemp_c, f_mintemp_c, f_maxtemp_c, f_totalprecip_mm, f_text, f_code, f_icon = [], [], [], [], [], [], [], []
+	# Get paths
+	rospack = rospkg.RosPack()
+	pkg_name = "time_weather_skill"
+	# File paths
+	pkg_path = rospack.get_path(pkg_name) # Package path
+	data_path = pkg_path + '/data/' # Data path
+	country_codes_path = data_path + 'wikipedia-iso-country-codes.csv'
 
 	###########################################################
 	############## HOW TO IMPLEMNT NEW SOURCE #################
@@ -42,6 +52,9 @@ def source2standard(source, forecast_type, weather_dic):
 	################# CHANGE CODE HERE ###################
 	# \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ #
 
+	# Initialize variable lists
+	f_date, f_avgtemp_c, f_mintemp_c, f_maxtemp_c, f_totalprecip_mm, f_text, f_code, f_icon = [], [], [], [], [], [], [], []
+
 	############################################# Apixu #############################################
 	if(source == 'apixu'):
 		######### Change forecast type name #########
@@ -52,15 +65,14 @@ def source2standard(source, forecast_type, weather_dic):
 		#############################################
 
 		# ########## Current weather ########## #
-		c_date = weather_dic['forecast']['forecastday'][0]['date']
+		c_date = DatetimeManager(weather_dic['location']['localtime']).date() 
 		c_temp_c = weather_dic['current']['temp_c']
 		c_is_day = weather_dic['current']['is_day']
 		c_precip_mm = weather_dic['current']['precip_mm']
 		c_text = weather_dic['current']['condition']['text'].lower()
 		c_code = weather_dic['current']['condition']['code']
 		c_icon = weather_dic['current']['condition']['icon']
-		c_last_updated = weather_dic['current']['last_updated']
-
+		c_last_updated = weather_dic['current']['last_updated_epoch']
 		# ########## Forecast weather ########## #
 		for forecastday in weather_dic['forecast']['forecastday']:
 			f_date.append(forecastday['date'])
@@ -71,90 +83,192 @@ def source2standard(source, forecast_type, weather_dic):
 			f_text.append(forecastday['day']['condition']['text'].lower())
 			f_code.append(forecastday['day']['condition']['code'])
 			f_icon.append(forecastday['day']['condition']['icon'])
-		f_last_updated = weather_dic['current']['last_updated']
+		f_last_updated = weather_dic['current']['last_updated_epoch']
 		f_forecast_days = len(weather_dic['forecast']['forecastday'])
 
 		# ########## Common parameters ########## #
 		city_name = weather_dic['location']['name']
-		country_name = weather_dic['location']['country']
-
+		country_code = csv_reader_country_codes(country_codes_path, 'English short name lower case', weather_dic['location']['country'], 'Alpha-2 code') # Transforms the country name into country code
+		country_name = country_code if (country_code != -1) else weather_dic['location']['country']
 	#################################################################################################
 
 	######################################### OpenWeatherMap ########################################
 	elif(source == 'openweathermap'):
 		# ########## Current weather ########## #
 		if(forecast_type == 'current'):
-			dtCurrent = datetime.datetime.utcfromtimestamp(weather_dic['dt'])
-
-			c_date = str(dtCurrent.year) + '-' + str(dtCurrent.month) + '-' + str(dtCurrent.day)
+			# Calculate timezone
+			lat, lon = weather_dic['coord']['lat'], weather_dic['coord']['lon']
+			timezone = tzwhere.tzwhere().tzNameAt(lat, lon)
+			# Actual datetime
+			nowtz = datetime.datetime.now(tz = pytz.timezone(timezone)) # Actual datetime in timezone
+			print nowtz.hour
+			c_date = str(nowtz.year) + '-' + str(nowtz.month) + '-' + str(nowtz.day)
 			c_temp_c = weather_dic['main']['temp']
 			c_is_day = 1 if (weather_dic['sys']['sunrise'] < weather_dic['dt'] < weather_dic['sys']['sunset']) else 0
 			c_precip_mm = weather_dic['rain']['1h'] if ('rain' in weather_dic) else 0
 			c_text = weather_dic['weather'][0]['description'].lower()
 			c_code = weather_dic['weather'][0]['id']
 			c_icon = 'http://openweathermap.org/img/w/' + str(weather_dic['weather'][0]['icon']) + '.png'
-			c_last_updated = c_date + ' ' + str(dtCurrent.hour) + ':' + str(dtCurrent.minute)
+			c_last_updated = weather_dic['dt']
+			print c_last_updated
 			city_name = weather_dic['name']
 			country_name = weather_dic['sys']['country']
 			
 		# ########## Forecast weather ########## #
 		if(forecast_type == 'forecast'):
-			#
-			FORECAST_HOUR = 16
-			UPDATE_HOUR = 3
+			# Calculate timezone
+			lat, lon = weather_dic['city']['coord']['lat'], weather_dic['city']['coord']['lon']
+			timezone = tzwhere.tzwhere().tzNameAt(lat, lon)
+			# Actual datetime
+			nowtz = datetime.datetime.now(tz = pytz.timezone(timezone)) # Actual datetime in timezone
+			FORECAST_HOUR = 16 # Hour at which the info is taken (Local time)
 
 			######## List the indexes of each forecast day #########
-			daysList = [] # List to store each day lists
-			actualDateIndexes = [] # List to store the indexes of one day
-			# If first forecastday is at 00:00 of next day, for the actual day it takes the prevision of that datetime
-			if(datetime.datetime.utcfromtimestamp(weather_dic['list'][0]['dt']).hour < UPDATE_HOUR):
-				actualDateIndexes.append(i)
-				daysList.append(actualDateIndexes)
-				actualDateIndexes = []
+			days = [] # List to store each day list
+			dayIndexes = [] # List to store the indexes of one day
+			# days = [dayIndexes1, dayIndexes2, ...]
+
+			# Transforms the datetime into the datetime of the timezone
+			dtForecastdaytz = datetime.datetime.fromtimestamp(weather_dic['list'][0]['dt'], tz=pytz.timezone(timezone)) # Datetime in timezone
+			# If first forecastday is different from the actual day, for the actual day it takes the prevision of that datetime
+			if(nowtz.day != dtForecastdaytz.day):
+				dayIndexes.append(0)
+				days.append(dayIndexes)
+				f_date.append(str(nowtz.year) + '-' + str(nowtz.month) + '-' + str(nowtz.day))
+				dayIndexes = []
 			# First date in the list
-			prevDate = datetime.datetime.utcfromtimestamp(weather_dic['list'][0]['dt']).date()
+			actualDate = dtForecastdaytz.date()
 			i=-1
 			for forecastday in weather_dic['list']:
 				i+=1
-				dtForecastday = datetime.datetime.utcfromtimestamp(forecastday['dt']) # Actual datetime
+				# Transforms the datetime into the datetime of the timezone
+				dtForecastdaytz = datetime.datetime.fromtimestamp(forecastday['dt'], tz=pytz.timezone(timezone)) # Datetime in timezone
 				# If there is a day of difference between actual and previous date it fills the days list and initialize the indexes list and 
-				if((dtForecastday.date() - prevDate) >= datetime.timedelta(days=1)):
-					prevDate = dtForecastday.date() # Update prevDate with actual date
-					daysList.append(actualDateIndexes)
-					actualDateIndexes = []
+				if(dtForecastdaytz.day != actualDate.day):
+					print dtForecastdaytz.day, actualDate.day
+					days.append(dayIndexes)
+					f_date.append(str(actualDate.year) + '-' + str(actualDate.month) + '-' + str(actualDate.day))
+					dayIndexes = []
+					actualDate = dtForecastdaytz.date() # Update actualDate with actual date
 				# Append actual index
-				actualDateIndexes.append(i)
+				dayIndexes.append(i)
 			# Append last index date list
-			daysList.append(actualDateIndexes)
+			days.append(dayIndexes)
+			f_date.append(str(actualDate.year) + '-' + str(actualDate.month) + '-' + str(actualDate.day))
 			########################################################
-			print daysList #----------------
-			for actualDateIndexes in daysList:
-				########## Search the forecast hour index ##########
-				for i in actualDateIndexes:
-					found = False
-					# Search if hour is greater or equal than an hour given
-					if (datetime.datetime.utcfromtimestamp(weather_dic['list'][i]['dt']).hour >= FORECAST_HOUR):
-						index = i
-						found = True
-						break
-				if(not found):
-					index = -1 # If hour not found, it uses the latest hour
+			#print f_date # ------
+			#print days #----------------
+			for dayIndexes in days:
+				###################### Day i #######################
+				mintempList = []
+				maxtempList = []
+				avgtemp = 0
+				forecastHour = True # Variable that indicates if the hour forecast must be realized
+				for index in dayIndexes:
+					# Transforms the datetime into the datetime of the timezone
+					dtForecastdaytz = datetime.datetime.fromtimestamp(weather_dic['list'][index]['dt'], tz=pytz.timezone(timezone)) # Datetime in timezone
+					print dtForecastdaytz.time()
+					# It is the forecast hour or the last hour
+					if((dtForecastdaytz.hour > FORECAST_HOUR or index == dayIndexes[-1]) and forecastHour == True):
+						totalprecip_mm = weather_dic['list'][index]['rain']['3h'] if ('rain' in weather_dic['list'][index] and '3h' in weather_dic['list'][index]['rain']) else 0
+						text = weather_dic['list'][index]['weather'][0]['description'].lower()
+						code = weather_dic['list'][index]['weather'][0]['id']
+						icon ='http://openweathermap.org/img/w/' + str(weather_dic['list'][index]['weather'][0]['icon']) + '.png'
+						forecastHour = False
+
+					# Entire day variables
+					avgtemp += weather_dic['list'][index]['main']['temp']
+					mintempList.append(weather_dic['list'][index]['main']['temp_min'])
+					maxtempList.append(weather_dic['list'][index]['main']['temp_max'])
+					print 'avgtemp', avgtemp
+				
+				#print 'index' , index # -----------------
+				# Forecast hour
+				#print 'avgtemp/len(dayIndexes)', avgtemp/len(dayIndexes)
+				f_avgtemp_c.append(avgtemp/len(dayIndexes))
+				f_mintemp_c.append(min(mintempList))
+				f_maxtemp_c.append(max(maxtempList))
+				# Entire day
+				f_totalprecip_mm.append(totalprecip_mm)
+				f_text.append(text)
+				f_code.append(code)
+				f_icon.append(icon)
 				####################################################
-				print 'index' , index # -----------------
-				f_date.append(DatetimeManager(weather_dic['list'][index]['dt_txt']).date())
-				print f_date # ---------------
-				f_avgtemp_c.append(weather_dic['list'][index]['main']['temp'])
-				f_mintemp_c.append(weather_dic['list'][index]['main']['temp_min'])
-				f_maxtemp_c.append(weather_dic['list'][index]['main']['temp_max'])
-				f_totalprecip_mm.append(weather_dic['list'][index]['rain']['3h'] if ('3h' in weather_dic['list'][index]['rain']) else 0)
-				f_text.append(weather_dic['list'][index]['weather'][0]['description'].lower())
-				f_code.append(weather_dic['list'][index]['weather'][0]['id'])
-				f_icon.append('http://openweathermap.org/img/w/' + str(weather_dic['list'][index]['weather'][0]['icon']) + '.png')
-			now = datetime.datetime.now()
-			f_last_updated = str(now.year) + '-' + str(now.month) + '-' + str(now.day) + ' ' + str(now.hour) + ':'  + str(now.minute)
+
+			print f_date # ---------------
+			f_last_updated = int(nowtz.strftime('%s'))
+			f_forecast_days = len(days)
+			city_name = weather_dic['city']['name']
+			country_name = weather_dic['city']['country']
+
+			'''
+			actualDay = nowtz
+			mintempList = []
+			maxtempList = []
+			avgtemp = 0
+			days = 0
+			forecastHour = True # Variable that indicates if the hour forecast must be realized
+			i=-1
+			for forecastday in weather_dic['list']:
+				i+=1
+				days+=1
+				# Transforms the datetime into the datetime of the timezone
+				dtForecastdaytz = datetime.datetime.fromtimestamp(forecastday['dt'], tz=pytz.timezone(timezone)) # Datetime in timezone
+
+				# Actual day is different from last day
+				if(actualDay.day != dtForecastdaytz.day):
+					# Day
+					f_date.append(str(actualDay.year) + '-' + str(actualDay.month) + '-' str.(actualDay.day))
+					# Forecast hour
+					f_avgtemp_c.append(avgtemp/days)
+					f_mintemp_c.append(min(mintempList))
+					f_maxtemp_c.append(max(maxtempList))
+					# Entire day
+					f_totalprecip_mm.append(totalprecip_mm)
+					f_text.append(text)
+					f_code.append(code)
+					f_icon.append(icon)
+
+					# Initialize new day
+					actualDay = dtForecastdaytz
+					mintempList = []
+					maxtempList = []
+					avgtemp = 0
+					days = 0
+					forecastHour = True
+
+				# It is the forecast hour or the last hour
+				if((dtForecastdaytz.hour > FORECAST_HOUR and forecastHour == True) or i == len(forecastday)-1):
+					totalprecip_mm = forecastday['rain']['3h'] if ('rain' in forecastday and '3h' in forecastday['rain']) else 0
+					text = forecastday['weather'][0]['description'].lower()
+					code = forecastday['weather'][0]['id']
+					icon ='http://openweathermap.org/img/w/' + str(forecastday[weather_dic['list'][index][]'weather'][0]['icon']) + '.png'
+					forecastHour = False
+
+				# Entire day variables
+				avgtemp += forecastday['main']['temp']
+				mintempList.append(weather_dic['list'][index]['main']['temp_min'])
+				maxtempList.append(weather_dic['list'][index]['main']['temp_max'])
+
+			# Last day
+			# Day
+			f_date.append(str(actualDay.year) + '-' + str(actualDay.month) + '-' str.(actualDay.day))
+			# Forecast hour
+			f_avgtemp_c.append(avgtemp/days)
+			f_mintemp_c.append(min(mintempList))
+			f_maxtemp_c.append(max(maxtempList))
+			# Entire day
+			f_totalprecip_mm.append(totalprecip_mm)
+			f_text.append(text)
+			f_code.append(code)
+			f_icon.append(icon)
+
+
+			f_last_updated = int(nowtz.strftime('%s')) # ----------
 			f_forecast_days = len(f_date)
 			city_name = weather_dic['city']['name']
 			country_name = weather_dic['city']['country']
+			'''
 	#################################################################################################
 
 	############################################ Source2 ############################################
@@ -186,7 +300,8 @@ def source2standard(source, forecast_type, weather_dic):
 			
 		# ########## Common parameters ########## #
 		city_name = weather_dic['location']['name']
-		country_name = weather_dic['location']['country']
+		country_code = csv_reader_country_codes(country_codes_path, 'English short name lower case', weather_dic['location']['country'], 'Alpha-2 code') # Transforms the country name into country code
+		country_name = country_code if (country_code != -1) else weather_dic['location']['country']
 	#################################################################################################
 
 	########################################### No source ###########################################
@@ -213,14 +328,14 @@ def source2standard(source, forecast_type, weather_dic):
 	#==============# Current weather #===============#
 	if(forecast_type == 'current' or forecast_type == 'all'): # 'Currrent' or 'all' data selected
 		current = {
-			'date': c_date, # '2018-11-08'
+			'date': c_date, # '2018-11-08' TIMEZONE datetime epoch
 			'temp_c': c_temp_c, # 51.8
 			'is_day': c_is_day, # 1
 			'precip_mm': c_precip_mm, # 0.2
 			'text': c_text, # 'Partly cloudy'
 			'code': c_code, # 1003
 			'icon': c_icon, # '//cdn.apixu.com/weather/64x64/day/266.png'
-			'last_updated': c_last_updated # '2018-11-08 17:45'
+			'last_updated': c_last_updated # '1541695515' UTC datetime epoch
 		}
 		standard_weather_dic.update({'current': current}) # Saves data in standard_weather_dic
 	#=============# Forecast weather #===============#
@@ -230,7 +345,7 @@ def source2standard(source, forecast_type, weather_dic):
 		i=0
 		for x in f_date:
 			forecastday.append({
-					'date': f_date[i], # '2018-11-08'
+					'date': f_date[i], # '2018-11-08' TIMEZONE datetime epoch
 					'avgtemp_c': f_avgtemp_c[i], # 10.7
 					'mintemp_c': f_mintemp_c[i], # 8.3
 					'maxtemp_c': f_maxtemp_c[i], # 12.9
@@ -243,14 +358,14 @@ def source2standard(source, forecast_type, weather_dic):
 		# Forecast weather
 		forecast = {
 			'forecastday': forecastday,
-			'last_updated': f_last_updated, # '2018-11-08 17:45'
+			'last_updated': f_last_updated, # '1541695515' UTC datetime epoch
 			'forecast_days': f_forecast_days # 7
 			}
 		standard_weather_dic.update({'forecast': forecast}) # Saves data in standard_weather_dic
 	#=============# Common parameters #==============#
 	common = {
 		'city_name': city_name, # 'Madrid'
-		'country_name': country_name, # 'Spain'
+		'country_name': country_name, # 'ES'
 		'source': source # 'apixu'
 	}
 	standard_weather_dic.update({'common': common}) # Saves data in standard_weather_dic
@@ -519,5 +634,5 @@ if __name__ == '__main__':
 			}
 		]}
 	}
-	result_info = source2standard('apixu', apixu_dic)
+	result_info = source2standard('apixu', 'current', apixu_dic)
 	print(result_info)

@@ -32,7 +32,7 @@ def csv_reader_params(filepath, source, forecast_type):
 
 	# If file does not exist
 	if(not SysOperations().path_exists(filepath)):
-		rospy.logwarn("[Csv Reader] Csv Reader Params ERROR: File does not exist")
+		rospy.logerr("[Csv Reader] Csv Reader Params ERROR: File does not exist")
 		return -1, {}, {}
 
 	# Constants
@@ -110,7 +110,7 @@ def csv_reader_params(filepath, source, forecast_type):
 
 	# Source not found
 	if(source_row_start == -1):
-		rospy.logwarn('[Csv Reader] Csv Reader Params ERROR: Source \'' + source + '\' not found')
+		rospy.logerr('[Csv Reader] Csv Reader Params ERROR: Source \'' + source + '\' not found')
 		return -1, {}, {}
 
 	############ Search forecast type #############
@@ -157,6 +157,52 @@ def csv_reader_params(filepath, source, forecast_type):
 
 	return url, params, extra_info # Info not found
 
+def csv_reader_country_codes(filepath, headerInput, inputInfo, headerOutput):
+	"""
+	Reads an standard column csv using the names of the headers and the input to get the output.
+	
+	@param filepath: Full file path.
+	@param headerInput: Name of the hedaer of the info input.
+	@param inputInfo: Input value.
+	@param headerOutput: Name of the hedaer of the info output.
+
+	@return result: Result of the request.
+	"""
+
+	# If file does not exist
+	if(not SysOperations().path_exists(filepath)):
+		rospy.logerr("[Csv Reader] Csv Reader Country Codes ERROR: File does not exist")
+		return -1 # Fail (-1)
+
+	################## Open csv ##################
+	with open(filepath) as csvfile:
+		csv_reader = csv.reader(csvfile, delimiter=',')
+
+		############ Find csv headers ############
+		headerInput_col = -1 # headerInput column
+		headerOutput_col = -1 # headerOutput column
+
+		row_n=-1
+		for row in csv_reader:
+			row_n+=1
+			# Search the headers columns
+			if(row_n == 0):
+				col_n=-1
+				for cell in row:
+					col_n+=1
+					if(cell == headerInput): # Source Code column
+						headerInput_col = col_n
+					if(cell == headerOutput): # Info Requested column
+						headerOutput_col = col_n
+				continue
+			# Search the info requested
+			if(row[headerInput_col].lower() == str(inputInfo).lower()): # Info found
+				rospy.logdebug("[Csv Reader] Info '" + str(inputInfo) + "' from '" + headerInput + "' found: " + str(row[headerOutput_col]))
+				return row[headerOutput_col]
+
+	rospy.logwarn("[Csv Reader] Csv Reader Country Codes ERROR: Info '" + str(inputInfo) + "' from '" + headerInput + "' not found")
+	return -1
+
 def csv_reader_conditions(filepath, source, source_code, info_requested):
 	"""
 	Reads a weather csv and returns the info given certain parameters.
@@ -176,7 +222,7 @@ def csv_reader_conditions(filepath, source, source_code, info_requested):
 
 	# If file does not exist
 	if(not SysOperations().path_exists(filepath)):
-		rospy.logwarn("[Csv Reader] Csv Reader Conditions ERROR: File does not exist")
+		rospy.logerr("[Csv Reader] Csv Reader Conditions ERROR: File does not exist")
 		return -1 # Fail (-1)
 
 	################## Open csv ##################
@@ -190,7 +236,6 @@ def csv_reader_conditions(filepath, source, source_code, info_requested):
 		row_n=-1
 		for row in csv_reader:
 			row_n+=1
-			print row
 			# Search the headers columns
 			if(row_n == 0):
 				col_n=-1
@@ -211,7 +256,6 @@ def csv_reader_conditions(filepath, source, source_code, info_requested):
 
 	rospy.logerr("[Csv Reader] Csv Reader Conditions ERROR: Code '" + str(source_code) + "' from '" + source + "' not found")
 	return -1
-
 
 if __name__ == '__main__':
 	print("[csv_reader]: __main__")
@@ -239,7 +283,11 @@ if __name__ == '__main__':
 
 	#___________csv_reader_conditions___________
 	# Get paths
-	
 	filepath = data_path + 'conditions_codes_standard.csv'
 	# Get info
 	print(csv_reader_conditions(filepath, 'openweathermap', '503', 'standard_icon'))
+	#___________csv_reader_country_codes___________
+	filepath = data_path + 'wikipedia-iso-country-codes.csv'
+	print(csv_reader_country_codes(filepath, 'Alpha-2 code', 'ES', 'English short name lower case'))
+	print(csv_reader_country_codes(filepath, 'English short name lower case', 'Spain', 'Alpha-2 code'))
+	

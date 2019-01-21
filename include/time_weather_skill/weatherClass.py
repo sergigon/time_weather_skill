@@ -40,10 +40,12 @@ class Weather():
     _GOAL_MAX_SIZE = 5 # Max size of the weather goal
     _WEATHER_FILENAME = 'weather' # Name of the file to store the weather data
     _PARAMS_FILENAME = 'weather_sources_params' # Name of the file to store the sources params data
+    _COUNTRY_CODES_FILENAME = 'wikipedia-iso-country-codes' # Name of the file to store the country codes data
 
     # Lists
-    #_SOURCE_LIST = ['apixu', 'openweathermap', 'source1', 'source2'] # List of the sources
+    _SOURCE_LIST = ['apixu', 'openweathermap', 'source1', 'source2'] # List of the sources
     _SOURCE_LIST = ['openweathermap', 'apixu', 'source1', 'source2'] # List of the sources
+    #_SOURCE_LIST = ['source2'] # List of the sources
     _UPDATE_HOURS = [23, 19, 14, 9, 4] # List of hours for current request
     _INFO_BASIC_LIST = {
         'current': ['date', 'temp_c', 'is_day', 'text', 'code', 'city_name', 'country_name', 'last_updated', 'icon', 'source'], # Basic current list
@@ -67,7 +69,6 @@ class Weather():
 
         # Gets paths
         self._root_path = rootpath # Root path
-        #self._data_path = self._root_path + '/data/' # Data path
 
     def _save_json(self, path, input_dic, extra_dic={}):
         """
@@ -232,7 +233,7 @@ class Weather():
         """
         Get weather from local or URL sources, and save it if it success.
 
-        @param location: City to get weather. Format: 'Madrid' or 'Madrid, Spain'.
+        @param location: City to get weather. Format: 'Madrid' or 'Madrid, ES'.
         @param forecast_type: 'forecast' or 'current'.
         @param date: Date for the weather.
 
@@ -243,6 +244,11 @@ class Weather():
         # Initialize variables
         lang = 'es'
         city_name, country_name = location_divider(location) # Divide the location into city and country names
+        # Transforms the country name into country code
+        filepath = self._root_path + self._COUNTRY_CODES_FILENAME + '.csv'
+        if(country_name != ''):
+	        country_code = csv_reader_country_codes(filepath, 'English short name lower case', country_name, 'Alpha-2 code')
+	        country_name = country_code if (country_code != -1) else country_name
 
         ################### Make local request ###################
         print("-- Making local request: " + city_name + ", " + country_name + ' --')
@@ -485,8 +491,9 @@ if __name__ == '__main__':
         rospack = rospkg.RosPack()
         pkg_name = "time_weather_skill"
         pkg_path = rospack.get_path(pkg_name) # Package path
+        data_path = pkg_path + '/data/' # Data path
 
-        weather = Weather(pkg_path)
+        weather = Weather(data_path)
         result, result_info = weather.manage_weather(['london', 'forecast', 'tomorrow', 'basic'])
         print('#######################')
         print('result_info: ' + str(result_info))

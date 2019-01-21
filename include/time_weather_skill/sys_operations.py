@@ -66,7 +66,7 @@ class SysOperations():
 		if os.path.exists(path):
 			return True
 		else:
-			rospy.logwarn("Sys Operations ERROR: File not found (" + path + ")")
+			rospy.logwarn("[Sys Operations] ERROR File not found (" + path + ")")
 			return False
 
 	def write_json(self, filepath, json_dic):
@@ -76,7 +76,7 @@ class SysOperations():
 		@param filepath: Full file path.
 		@param json_dic: JSON dictionary to write.
 		"""
-		rospy.logdebug('[Sys Operations]: ' + 'Writting ' + filepath)
+		rospy.logdebug('[Sys Operations] ' + 'Writting ' + filepath)
 
 		# Checks if the file exists
 		if not self.path_exists(filepath): # File NOT found
@@ -94,7 +94,7 @@ class SysOperations():
 
 		@return data: Return JSON data if file found. If not, return -1.
 		"""
-		rospy.logdebug('[Sys Operations]: ' + 'Loading' + filepath)
+		rospy.logdebug('[Sys Operations] ' + 'Loading' + filepath)
 
 		# Checks if the file exists
 		if self.path_exists(filepath): # File found

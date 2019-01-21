@@ -30,7 +30,7 @@ def location_divider(location):
     @param location: City to get weather. Format: 'Madrid' or 'Madrid, Spain'.
 
     @return city_name: Name of the city.
-    @return country_name: Name of the country.
+    @return country_name: Name of the country. If not specified, it returns ''.
     """
 
     # Initialize variables
