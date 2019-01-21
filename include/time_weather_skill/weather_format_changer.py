@@ -328,7 +328,7 @@ def source2standard(source, forecast_type, weather_dic):
 	#==============# Current weather #===============#
 	if(forecast_type == 'current' or forecast_type == 'all'): # 'Currrent' or 'all' data selected
 		current = {
-			'date': c_date, # '2018-11-08' TIMEZONE datetime epoch
+			'date': c_date, # '2018-11-08' TIMEZONE datetime text
 			'temp_c': c_temp_c, # 51.8
 			'is_day': c_is_day, # 1
 			'precip_mm': c_precip_mm, # 0.2
@@ -345,7 +345,7 @@ def source2standard(source, forecast_type, weather_dic):
 		i=0
 		for x in f_date:
 			forecastday.append({
-					'date': f_date[i], # '2018-11-08' TIMEZONE datetime epoch
+					'date': f_date[i], # '2018-11-08' TIMEZONE datetime text
 					'avgtemp_c': f_avgtemp_c[i], # 10.7
 					'mintemp_c': f_mintemp_c[i], # 8.3
 					'maxtemp_c': f_maxtemp_c[i], # 12.9
