@@ -42,6 +42,9 @@ class Apixu():
 	info_advanced_list = info_basic_list[:]
 	info_advanced_list.extend(['mintemp_c', 'maxtemp_c', 'totalprecip_mm']) # Advanced list
 
+	# Lists for current request
+	update_hours = [23, 19, 14, 9, 4]
+
 	def __init__(self):
 		"""
         Init method.
@@ -98,7 +101,7 @@ class Apixu():
 
 		
 
-	def _request_local(self, location, lang, file_name, file_name_check):
+	def _request_local(self, location, forecast, lang, file_name, file_name_check):
 		"""
         Request local method. Modify self.__data variable.
 
@@ -114,30 +117,52 @@ class Apixu():
 		data_json = self.__create_json.load(file_name) # Load JSON file
 		data_json_check = self.__create_json.load(file_name_check) # Load JSON check file
 
+		make_req = False # Indicate to fill the data
 		if (data_json != -1 and data_json_check != -1): # JSON files exists
-			try:
-				# Check if 'city' and 'lang' coincide
-				if(location.lower() == data_json_check['city'].lower() and lang.lower() == data_json_check['lang'].lower()): # 'city' and 'lang' coincide
-					now = datetime.datetime.now() # Get current date
-					if(data_json_check['day'] == str(now.day) and data_json_check['month'] == str(now.month) and data_json_check['year'] == str(now.year)): # Already updated
-						print('Local request succeded')
-						self.__data = data_json # Get JSON data
-						return True
+			# Check all parameters exist
+			#try:
+			# Check if 'city' and 'lang' coincide
+			if(location.lower() == data_json_check['city'].lower() and lang.lower() == data_json_check['lang'].lower()): # 'city' and 'lang' coincide
+				now = datetime.datetime.now() # Get current date
+				# Check if date is updated
+				if(data_json_check['day'] == str(now.day) and data_json_check['month'] == str(now.month) and data_json_check['year'] == str(now.year)): # Already updated
+					print('Info in local found: "' + data_json_check['city'].lower() + '", "' + data_json_check['lang'].lower() + '"')
+					# Current is selected
+					if (forecast == 'current'):
+						print('Checking if current weather is updated...')
+						hour = -1 # Hour used to update
+						for update_hour in self.update_hours: # Search the hour in the list
+							hour = update_hour
+							if(update_hour < now.hour): # When find the hour it stops
+								break
+						# Check if current weather is updated
+						if(data_json_check['hour'] == str(hour)): # Already updated
+							print('Current weather already updated')
+							make_req = True
+						else:
+							print('Current weather NOT updated')
 					else:
-						print("Local request ERROR: File not updated")
-						return False
+						print('hola')
+						make_req = True
 				else:
-					print("Local request ERROR: 'city' or 'lang' do not coincide")
-					return False
-			except:
-				print("Local request ERROR: Parameters not existing")
-				return False
+					rospy.logwarn("Local request ERROR: File not updated")
+			else:
+				rospy.logwarn("Local request ERROR: 'city' or 'lang' do not coincide")
+			#except:
+			#	rospy.logwarn("Local request ERROR: Parameters not existing")
 		else:
-			print("Local request ERROR: JSON files do not exist")
+			rospy.logwarn("Local request ERROR: JSON files do not exist")
+
+		if(make_req):
+			self.__data = data_json # Get JSON data
+			print('Local request succeded')
+			return True
+		else:
+			print('Local request not available')
 			return False
 
 
-	def _request(self, location, days=apixu_limit_weather, lang='es', key=api_key_serg):
+	def _request(self, location, forecast, days=apixu_limit_weather, lang='es', key=api_key_serg):
 		"""
         Request method.
 
@@ -156,16 +181,14 @@ class Apixu():
 		file_name_check_full = self.__file_name_check + '_' + location.lower() + '_' + lang
 		
 		############## Local request ###############
-		print("## Making a local request ##")
-		local_request = self._request_local(location, lang, file_name_full, file_name_check_full)
+		print("#### Making a local request ####")
+		local_request = self._request_local(location, forecast, lang, file_name_full, file_name_check_full)
 		if(local_request == True):
 			return True
-		else:
-			print('Local request not available')
 		############################################
 
 		############### URL request ################
-		print("## Making an URL request ##")
+		print("#### Making an URL request ####")
 		# Get the data from the URL in JSON format
 		url_request = self._request_URL(location, days, lang, key) # URL request
 		############################################
@@ -214,7 +237,7 @@ class Apixu():
 		return date
 
 
-	def _get_info(self, date, info_required):
+	def _get_info(self, date,forecast, info_required):
 		"""
 		Get info method.
 

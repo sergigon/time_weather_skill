@@ -1,0 +1,15 @@
+data/
+	params/
+		weather_sources_params.csv (Params of each source to make the request)
+		conditions_codes.csv (Table with the code conditions assignation)
+		wikipedia-iso-country-codes.csv: (Table with the countries and their ISO code)
+			
+	weather_icons/ (Weather icons folder)
+		/{name_icon_collection}
+			/{int}x{int} (Icons size)
+				/day
+				/night
+	cache/:
+		weather_{city_name}_{country_code}.json: (Cache of each request)
+
+	info/ (Devel info)

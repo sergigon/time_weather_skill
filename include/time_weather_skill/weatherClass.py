@@ -27,7 +27,15 @@ from time_weather_skill.csv_reader import *
 # Exceptions
 class InvalidKey(Exception):
     pass
+class InvalidURL(Exception):
+    pass
+class CityNotFound(Exception):
+    pass
+class NoParam(Exception):
+    pass
 class GeneralError(Exception):
+    pass
+class LimitCalls(Exception):
     pass
 
 class Weather():
@@ -38,9 +46,15 @@ class Weather():
 
     # Constants
     _GOAL_MAX_SIZE = 5 # Max size of the weather goal
-    _WEATHER_FILENAME = 'weather' # Name of the file to store the weather data
-    _PARAMS_FILENAME = 'weather_sources_params' # Name of the file to store the sources params data
-    _COUNTRY_CODES_FILENAME = 'wikipedia-iso-country-codes' # Name of the file to store the country codes data
+
+    # Params constants
+    _LOCAL_COUNTRY_PARAM = 'context/robot/country' # Country code (ISO 3166, 2)
+    _LANGUAGE_PARAM = 'context/user/language'
+
+    # Filenames
+    _CACHE_FILENAME_STR = 'cache' # Part name of the file to store the weather data (without extension)
+    _PARAMS_FILENAME = 'weather_sources_params.csv' # Name of the file to store the sources params data
+    _COUNTRY_CODES_FILENAME = 'wikipedia-iso-country-codes.csv' # Name of the file to store the country codes data
 
     # Lists
     _SOURCE_LIST = ['apixu', 'openweathermap', 'source1', 'source2'] # List of the sources
@@ -49,28 +63,30 @@ class Weather():
     _UPDATE_HOURS = [23, 19, 14, 9, 4] # List of hours for current request
     _INFO_BASIC_LIST = {
         'current': ['date', 'temp_c', 'is_day', 'text', 'code', 'city_name', 'country_name', 'last_updated', 'icon', 'source'], # Basic current list
-        'forecast': ['date', 'avgtemp_c', 'text', 'code', 'city_name', 'country_name', 'last_updated', 'icon', 'source'] # Basic advanced list
+        'forecast': ['date', 'avgtemp_c', 'text', 'code', 'city_name', 'country_name', 'last_updated', 'icon', 'source', 'mintemp_c', 'maxtemp_c'] # Basic advanced list
         }
     _INFO_ADVANCED_LIST = copy.deepcopy(_INFO_BASIC_LIST)
     _INFO_ADVANCED_LIST['current'].extend(['precip_mm']) # Advanced current list
-    _INFO_ADVANCED_LIST['forecast'].extend(['mintemp_c', 'maxtemp_c', 'totalprecip_mm']) # Advanced forecast list
+    _INFO_ADVANCED_LIST['forecast'].extend(['totalprecip_mm']) # Advanced forecast list
 
     _TIMECLASS_LIST = ['is_day'] # List of the TimeClass parameters
 
-    def __init__(self, rootpath):
+    def __init__(self, datapath):
         """
         Init method.
 
-        @param rootpath: Root path from where to work with data. Usually, the package path.
+        @param datapath: Data path from where to work with data. Usually, the package path.
         """
         
         # SysOperations object
-        self._json_manager = SysOperations()
+        self._file_manager = SysOperations()
 
         # Gets paths
-        self._root_path = rootpath # Root path
+        self._data_path = datapath # Data path
+        self._cache_path = self._data_path + 'cache/' # Data path
+        self._params_path = self._data_path + 'params/' # Params path
 
-    def _save_json(self, path, input_dic, extra_dic={}):
+    def _update_cache(self, path, input_dic, extra_dic={}):
         """
         Save weather dictionary in a Json file.
 
@@ -84,7 +100,7 @@ class Weather():
         """
         
         # Define filename
-        filename = self._WEATHER_FILENAME + '_' + input_dic['common']['city_name'].lower().replace(' ', '-')  + '_' +  input_dic['common']['country_name'].lower().replace(' ', '-') 
+        filename = self._CACHE_FILENAME_STR + '_' + input_dic['common']['city_name'].lower().replace(' ', '-')  + '_' +  input_dic['common']['country_name'].lower().replace(' ', '-') 
         filepath = path + filename + '.json'
 
         # Add extra info
@@ -92,9 +108,9 @@ class Weather():
  
         # Write the data in the JSON file
         print('Saving weather (' + filename + ')')
-        self._json_manager.write_json(filepath, input_dic) # Write weather info into JSON file
+        self._file_manager.write_json(filepath, input_dic) # Write weather info into JSON file
 
-    def _URL_request(self, url, params):
+    def _url_request(self, source, url, params):
         """
         URL request method.
 		
@@ -102,41 +118,106 @@ class Weather():
         @param params: Dictionary with the url request params.
         
         @return result: Final result.
+            - -1: Fail
+            -  0: Url request success
+            -  1: City not found
+            -  2: Connection Error
         @return result_info_dic: Weather dictionary result.
         """
 
         # Make URL request
         try:
             # Get the data from the URL in JSON format
-            r = requests.get(url, params = params)
+            r = requests.get(url, params = params, timeout=5.05)
             # Error requests
             ##### OpenWeatherMap #####
-            if 'cod' in r.json():
-                if (r.json()['cod'] == 401): # Invalid Key
+            if(source == 'openweathermap'): # HTTP Status Code + OpenWeatherMap codes
+                rospy.logwarn('cod: ' + str(r.json()['cod']))
+                if (str(r.json()['cod']) == '401'): # Invalid Key
                     raise InvalidKey(r.json()['message'])
-
+                elif (str(r.json()['cod']) == '404'): # City Not Found
+                    raise CityNotFound(r.json()['message'])
+                elif (str(r.json()['cod']) == '429'): # Limit of Calls Exceeded
+                    raise LimitCalls(r.json()['message'])
+                elif (str(r.json()['cod'])[0] != '2'): # No Success Code (2xx)
+                    if 'message' in r.json():
+                        raise GeneralError(r.json()['message'])
+                    else:
+                        raise GeneralError()
             ##### Apixu #####
-            if 'error' in r.json(): # ERROR in the request
-                if (r.json()['error']['code'] == 2006): # Invalid key
-                    raise InvalidKey(r.json()['error']['message'])
-                else: # General error
-                    raise GeneralError(r.json()['error']['message'])
+            if(source == 'apixu'): # https://www.apixu.com/doc/errors.aspx
+                if 'error' in r.json():
+                    rospy.logwarn('error: ' + str(r.json()['error']))
+                    if (r.json()['error']['code'] == 1002 # Key Not Provided
+                        or r.json()['error']['code'] == 1003): # Location Not Provided
+                        raise NoParam(r.json()['error']['message'])
+                    elif (r.json()['error']['code'] == 1005): # Invalid URL
+                        raise InvalidURL(r.json()['error']['message'])
+                    elif (r.json()['error']['code'] == 1006): # City Not Found
+                        raise CityNotFound(r.json()['error']['message'])
+                    elif (r.json()['error']['code'] == 2006 # Invalid Key
+                        or r.json()['error']['code'] == 2008): # Disabled key
+                        raise InvalidKey(r.json()['error']['message'])
+                    elif (r.json()['error']['code'] == 2007): # Limit of Calls Exceeded
+                        raise LimitCalls(r.json()['error']['message'])
+                    else: # General error
+                        raise GeneralError(r.json()['error']['message'])
 
             ### NO errors in the request ###
             print('URL request succeded')
             return 0, r.json()
 
-        except InvalidKey as e:
-            rospy.logwarn('[weatherClass] URL request ERROR: Invalid Key (' + str(e) + ')')
+        # Exceptions
+        # City not found #
+        except CityNotFound as e: # City not found
+            rospy.logwarn('[weatherClass] URL request ERROR: City not found (%s)' % e)
+            return 1, {}
+        # Connection error #
+        except requests.exceptions.ConnectionError as e: # Connection Error
+            rospy.logwarn('[weatherClass] URL request ERROR: Connection ERROR (%s)' % e)
+            return 2, {}
+        except requests.ReadTimeout as e: # Timeout
+            rospy.logwarn('[weatherClass] URL request ERROR: Timeout (%s)' % e)
+            return 2, {}
+        # Fail #
+        except NoParam as e: # Param Not Provided
+            rospy.logwarn('[weatherClass] URL request ERROR: Param not provided (%s)' % e)
+            return -1, {}
+        except InvalidURL as e:
+            rospy.logwarn('[weatherClass] URL request ERROR: Invalid URL (%s)' % e)
+            return -1, {}
+        except InvalidKey as e: # Invalid Key
+            rospy.logwarn('[weatherClass] URL request ERROR: Invalid Key (%s)' % e)
+            return -1, {}
+        except requests.exceptions.MissingSchema as e: # Invalid URL
+            rospy.logerr("MissingSchema; %s" % e)
+            return -1, {}
+        except GeneralError as e: # General Error
+            rospy.logwarn('[weatherClass] URL request ERROR: General ERROR: (%s)' % e)
+            return -1, {}
+        except LimitCalls as e: # Limit of Calls Exceeded
+            rospy.logwarn('[weatherClass] URL request ERROR: Limit of calls exceded: (%s)' % e)
             return -1, {}
 
-        except requests.exceptions.ConnectionError as e:
-            rospy.logwarn("[weatherClass] URL request ERROR: Connection ERROR: " + str(e))
-            return -1, {}
+    def _json_searcher(self, list_json, name):
+        """
+        Method to search a json. It searchs the first characters of the filenames.
 
-        except GeneralError as e:
-            rospy.logwarn("[weatherClass] URL request ERROR: General ERROR: " + str(e))
-            return -1, {}
+        @param list_json: List of json filenames.
+        @param name: Name to search.
+
+        @return filename: Filename found. If not found, it returns -1.
+        """
+
+        name_len = len(name)
+        # Search file in the list
+        for list_i in list_json:
+            # There is a coincidence
+            if(name == list_i[:name_len]): # Search the first characters in the filename
+                return list_i # Get filename
+                break
+
+        return -1
 
     def _local_request(self, city_name, country_name = ''):
         """
@@ -149,85 +230,45 @@ class Weather():
         @return result_info_dic: Weather dictionary result.
         """
 
-        # Initialize results
-        result = -1
-        result_info_dic = {}
+        # Initialize variables
+        result, result_info_dic = -1, {}
         found = False
+        country_specified = False # Indicates if the country has been specified
+        local_country_name = rospy.get_param(self._LOCAL_COUNTRY_PARAM) # Get local country name
 
-        # File to search (Format ex: 'weather_madrid_spain.json')
-        filename = self._WEATHER_FILENAME
-        filename = filename + '_' + city_name.lower().replace(' ', '-') 
+        # Json files list in the data folder
+        list_json = self._file_manager.ls_json(self._cache_path)
+
+        # File to search creation (Format ex: 'cache_madrid_es.json')
         if (country_name != ''): # Country specified
-            filename = filename + '_' + country_name.lower().replace(' ', '-') 
+            cache_name = self._CACHE_FILENAME_STR + '_' + city_name.lower().replace(' ', '-') + '_' + country_name.lower().replace(' ', '-') # cache_city_country
+            rospy.logdebug('Country specified: Searching %s' % cache_name)
+            cache_filename = self._json_searcher(list_json, cache_name)
+        else: # Country NOT specified
+            cache_name = self._CACHE_FILENAME_STR + '_' + city_name.lower().replace(' ', '-') + '_' + local_country_name.lower().replace(' ', '-') # cache_city_local-country
+            rospy.logdebug('Country NOT specified: Searching %s (local country)' % cache_name)
+            cache_filename = self._json_searcher(list_json, cache_name)
+            if (cache_filename == -1):
+                # Searchs without country
+                cache_name = self._CACHE_FILENAME_STR + '_' + city_name.lower().replace(' ', '-') # cache_city
+                rospy.logdebug('Country NOT specified: Searching %s (without country)' % cache_name)
+                cache_filename = self._json_searcher(list_json, cache_name)
 
-        # Search json files in the data folder
-        list_json = self._json_manager.ls_json(self._root_path)
-
-        # Search file in the list
-        filename_len = len(filename)
-        for list_i in list_json:
-            if(filename == list_i[:filename_len]):
-                filename = list_i[:-5] # Get filename without the '.json' string
-                filepath = self._root_path + filename + '.json'
-                # Check if JSON files exists
-                result_info_dic = self._json_manager.load_json(filepath) # Load json file
-                found = True
-                break
-
-        if(found and result_info_dic != -1):
-            print('\'' + filename + '\'' + ' file found')
-            result = 0
-        else:
+        if (cache_filename == -1):
             result, result_info_dic = -1, {}
-            rospy.logwarn("Local request ERROR: Local file not found")
+            rospy.logwarn("Local request ERROR: '%s' file not found" % cache_name)
+        else:
+            cache_filepath = self._cache_path + cache_filename
+            # Check if JSON files exists
+            result_info_dic = self._file_manager.load_json(cache_filepath) # Load json file
+            if(result_info_dic == -1):
+                result, result_info_dic = -1, {}
+                rospy.logwarn("Local request ERROR: '%s' file not found" % cache_name)
+            else:
+                print('\'%s\' file found' % cache_name)
+                result = 0
 
         return result, result_info_dic
-        
-        '''
-        make_req = False # Indicate to fill the data
-        if (data_json != -1 and data_json_check != -1): # JSON files exists
-            # Check all parameters exist
-            #try:
-            # Check if 'city' and 'lang' coincide
-            if(location.lower() == data_json_check['city'].lower() and lang.lower() == data_json_check['lang'].lower()): # 'city' and 'lang' coincide
-                now = datetime.datetime.now() # Get current date
-                # Check if date is updated
-                if(data_json_check['day'] == str(now.day) and data_json_check['month'] == str(now.month) and data_json_check['year'] == str(now.year)): # Already updated
-                    print('Info in local found: "' + data_json_check['city'].lower() + '", "' + data_json_check['lang'].lower() + '"')
-                    # Current is selected
-                    if (forecast == 'current'):
-                        print('Checking if current weather is updated...')
-                        hour = -1 # Hour used to update
-                        for update_hour in self.update_hours: # Search the hour in the list
-                            hour = update_hour
-                            if(update_hour < now.hour): # When find the hour it stops
-                                break
-                        # Check if current weather is updated
-                        if(data_json_check['hour'] == str(hour)): # Already updated
-                            print('Current weather already updated')
-                            make_req = True
-                        else:
-                            print('Current weather NOT updated')
-                    else:
-                        print('hola')
-                        make_req = True
-                else:
-                    rospy.logwarn("Local request ERROR: File not updated")
-            else:
-                rospy.logwarn("Local request ERROR: 'city' or 'lang' do not coincide")
-            #except:
-            #   rospy.logwarn("Local request ERROR: Parameters not existing")
-        else:
-            rospy.logwarn("Local request ERROR: JSON files do not exist")
-
-        if(make_req):
-            self.__data = data_json # Get JSON data
-            print('Local request succeded')
-            return True
-        else:
-            print('Local request not available')
-            return False
-        '''
 
     def _request_weather(self, location, forecast_type, date):
         """
@@ -242,12 +283,12 @@ class Weather():
         """
 
         # Initialize variables
-        lang = 'es'
+        lang = rospy.get_param(self._LANGUAGE_PARAM)
         city_name, country_name = location_divider(location) # Divide the location into city and country names
         # Transforms the country name into country code
-        filepath = self._root_path + self._COUNTRY_CODES_FILENAME + '.csv'
+        country_codes_filepath = self._params_path + self._COUNTRY_CODES_FILENAME
         if(country_name != ''):
-	        country_code = csv_reader_country_codes(filepath, 'English short name lower case', country_name, 'Alpha-2 code')
+	        country_code = csv_reader_country_codes(country_codes_filepath, 'English short name lower case', country_name, 'Alpha-2 code') # If
 	        country_name = country_code if (country_code != -1) else country_name
 
         ################### Make local request ###################
@@ -299,12 +340,58 @@ class Weather():
 
         '''
 
+        '''
+        make_req = False # Indicate to fill the data
+        if (data_json != -1 and data_json_check != -1): # JSON files exists
+            # Check all parameters exist
+            #try:
+            # Check if 'city' and 'lang' coincide
+            if(location.lower() == data_json_check['city'].lower() and lang.lower() == data_json_check['lang'].lower()): # 'city' and 'lang' coincide
+                now = datetime.datetime.now() # Get current date
+                # Check if date is updated
+                if(data_json_check['day'] == str(now.day) and data_json_check['month'] == str(now.month) and data_json_check['year'] == str(now.year)): # Already updated
+                    print('Info in local found: "' + data_json_check['city'].lower() + '", "' + data_json_check['lang'].lower() + '"')
+                    # Current is selected
+                    if (forecast == 'current'):
+                        print('Checking if current weather is updated...')
+                        hour = -1 # Hour used to update
+                        for update_hour in self.update_hours: # Search the hour in the list
+                            hour = update_hour
+                            if(update_hour < now.hour): # When find the hour it stops
+                                break
+                        # Check if current weather is updated
+                        if(data_json_check['hour'] == str(hour)): # Already updated
+                            print('Current weather already updated')
+                            make_req = True
+                        else:
+                            print('Current weather NOT updated')
+                    else:
+                        print('hola')
+                        make_req = True
+                else:
+                    rospy.logwarn("Local request ERROR: File not updated")
+            else:
+                rospy.logwarn("Local request ERROR: 'city' or 'lang' do not coincide")
+            #except:
+            #   rospy.logwarn("Local request ERROR: Parameters not existing")
+        else:
+            rospy.logwarn("Local request ERROR: JSON files do not exist")
+
+        if(make_req):
+            self.__data = data_json # Get JSON data
+            print('Local request succeded')
+            return True
+        else:
+            print('Local request not available')
+            return False
+        '''
+
         ##########################################################
 
 
         ################## Make URL requests #####################
         url_result, url_result_info_dic = -1, {}
-        params_filepath = self._root_path + self._PARAMS_FILENAME + '.csv'
+        params_filepath = self._params_path + self._PARAMS_FILENAME
         # Selects the source from the source list
         for source in self._SOURCE_LIST:
             print("-- Making URL request to: '" + source + "' --")
@@ -334,7 +421,7 @@ class Weather():
                         params.update({key: lang})
 
             ############# Request ##############
-            url_result, url_result_info_dic = self._URL_request(url, params)
+            url_result, url_result_info_dic = self._url_request(source, url, params)
             rospy.logdebug('[weatherClass] url_result_info_dic: ' + str(url_result_info_dic))
 
             ####### Request success #######
@@ -362,7 +449,7 @@ class Weather():
                     'lang': lang
                 }
                 # Saves the content in a local file
-                self._save_json(self._root_path, url_result_info_dic, extra_dic)
+                self._update_cache(self._cache_path, url_result_info_dic, extra_dic)
                 return url_result, url_result_info_dic
 
         return -1, {}

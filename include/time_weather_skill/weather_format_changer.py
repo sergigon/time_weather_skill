@@ -32,13 +32,18 @@ def source2standard(source, forecast_type, weather_dic):
 	@return standard_weather_dic: Standard output weather dictionary.
 	"""
 
-	# Get paths
+	# Filenames
+	_COUNTRY_CODES_FILENAME = 'wikipedia-iso-country-codes.csv'
+
+	# Paths
 	rospack = rospkg.RosPack()
 	pkg_name = "time_weather_skill"
+	pkg_path = rospack.get_path(pkg_name) + '/' # Package path
+	data_path = pkg_path + 'data/' # Data path
+	params_path = data_path + 'params/' # Params path
+
 	# File paths
-	pkg_path = rospack.get_path(pkg_name) # Package path
-	data_path = pkg_path + '/data/' # Data path
-	country_codes_path = data_path + 'wikipedia-iso-country-codes.csv'
+	country_codes_pathfile = params_path + _COUNTRY_CODES_FILENAME
 
 	###########################################################
 	############## HOW TO IMPLEMNT NEW SOURCE #################
@@ -88,7 +93,7 @@ def source2standard(source, forecast_type, weather_dic):
 
 		# ########## Common parameters ########## #
 		city_name = weather_dic['location']['name']
-		country_code = csv_reader_country_codes(country_codes_path, 'English short name lower case', weather_dic['location']['country'], 'Alpha-2 code') # Transforms the country name into country code
+		country_code = csv_reader_country_codes(country_codes_pathfile, 'English short name lower case', weather_dic['location']['country'], 'Alpha-2 code') # Transforms the country name into country code
 		country_name = country_code if (country_code != -1) else weather_dic['location']['country']
 	#################################################################################################
 
@@ -300,7 +305,7 @@ def source2standard(source, forecast_type, weather_dic):
 			
 		# ########## Common parameters ########## #
 		city_name = weather_dic['location']['name']
-		country_code = csv_reader_country_codes(country_codes_path, 'English short name lower case', weather_dic['location']['country'], 'Alpha-2 code') # Transforms the country name into country code
+		country_code = csv_reader_country_codes(country_codes_pathfile, 'English short name lower case', weather_dic['location']['country'], 'Alpha-2 code') # Transforms the country name into country code
 		country_name = country_code if (country_code != -1) else weather_dic['location']['country']
 	#################################################################################################
 

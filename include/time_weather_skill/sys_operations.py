@@ -94,7 +94,7 @@ class SysOperations():
 
 		@return data: Return JSON data if file found. If not, return -1.
 		"""
-		rospy.logdebug('[Sys Operations] ' + 'Loading' + filepath)
+		rospy.logdebug('[Sys Operations] Loading ' + filepath)
 
 		# Checks if the file exists
 		if self.path_exists(filepath): # File found
