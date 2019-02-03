@@ -96,7 +96,7 @@ def makeCA_info(etts_text):
     kvp.key = "etts_text"
     kvp.value = etts_text
     msg.values.append(kvp)
-    print "Sending CA_info"
+    rospy.logdebug("Sending CA_info")
     return msg
     
 def makeCA_gesture_info(gesture):
@@ -111,7 +111,7 @@ def makeCA_gesture_info(gesture):
     kvp.key = "gesture"
     kvp.value = gesture
     msg.values.append(kvp)
-    print "Sending CA_info"
+    rospy.logdebug("Sending CA_info")
     return msg
 
 def activateCA(timestamp,grammar,tag):

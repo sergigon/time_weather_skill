@@ -1,0 +1,10 @@
+standard condition,standard code,wikipedia icon,material_design icon,apixu icon
+clear,100,clear.png,clear.png,clear.png
+few-clouds,101,few-clouds.png,few-clouds.png,few-clouds.png
+overcast,102,overcast.png,overcast.png,overcast.png
+mist,103,overcast.png,mist.png,mist.png
+showers-scattered,200,showers-scattered.png,showers-scattered.png,showers-scattered.png
+showers,201,showers.png,showers.png,showers.png
+snow,300,snow.png,snow.png,snow.png
+storm,400,storm.png,storm.png,storm.png
+severe-alert,500,severe-alert.png,tornado.png,storm.png

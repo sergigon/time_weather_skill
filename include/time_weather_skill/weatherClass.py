@@ -292,7 +292,7 @@ class Weather():
         country_codes_filepath = self._params_path + self._COUNTRY_CODES_FILENAME
         if(country_code != ''): # Country code specified
             # Country name to code conversion, if needed
-	        country_code_aux = csv_reader_country_codes(country_codes_filepath, 'English short name lower case', country_code, 'Alpha-2 code') 
+	        country_code_aux = csv_reader_IO(country_codes_filepath, 'English short name lower case', country_code, 'Alpha-2 code') 
 	        country_code = country_code_aux if (country_code_aux != -1) else country_code
 
         ################### Make local request ###################

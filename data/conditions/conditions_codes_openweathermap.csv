@@ -1,0 +1,55 @@
+source condition,source code day,source code night,source code,standard code
+thunderstorm with light rain,11d,11n,200,400
+thunderstorm with rain,11d,11n,201,400
+thunderstorm with heavy rain,11d,11n,202,400
+light thunderstorm,11d,11n,210,400
+thunderstorm,11d,11n,211,400
+heavy thunderstorm,11d,11n,212,400
+ragged thunderstorm,11d,11n,221,400
+thunderstorm with light drizzle,11d,11n,230,400
+thunderstorm with drizzle,11d,11n,231,400
+thunderstorm with heavy drizzle,11d,11n,232,400
+light intensity drizzle,09d,09n,300,201
+drizzle,09d,09n,301,201
+heavy intensity drizzle,09d,09n,302,201
+light intensity drizzle rain,09d,09n,310,201
+drizzle rain,09d,09n,311,201
+heavy intensity drizzle rain,09d,09n,312,201
+shower rain and drizzle,09d,09n,313,201
+heavy shower rain and drizzle,09d,09n,314,201
+shower drizzle,09d,09n,321,201
+light rain,10d,10n,500,200
+moderate rain,10d,10n,501,200
+heavy intensity rain,10d,10n,502,200
+very heavy rain,10d,10n,503,200
+extreme rain,10d,10n,504,200
+freezing rain,13d,13n,511,300
+light intensity shower rain,09d,09n,520,200
+shower rain,09d,09n,521,201
+heavy intensity shower rain,09d,09n,522,201
+ragged shower rain,09d,09n,531,201
+light snow,13d,13n,600,300
+snow,13d,13n,601,300
+heavy snow,13d,13n,602,300
+sleet,13d,13n,611,300
+shower sleet,13d,13n,612,300
+light rain and snow,13d,13n,615,300
+rain and snow,13d,13n,616,300
+light shower snow,13d,13n,620,300
+shower snow,13d,13n,621,300
+heavy shower snow,13d,13n,622,300
+mist,50d,50n,701,103
+smoke,50d,50n,711,103
+haze,50d,50n,721,103
+"sand, dust whirls",50d,50n,731,103
+fog,50d,50n,741,103
+sand,50d,50n,751,103
+dust,50d,50n,761,103
+volcanic ash,50d,50n,762,500
+squalls,50d,50n,771,102
+tornado,50d,50n,781,500
+clear sky,01d,01n,800,100
+few clouds,02d,02n,801,101
+scattered clouds,03d,03n,802,101
+broken clouds,04d,04n,803,102
+overcast clouds,04d,04n,804,102

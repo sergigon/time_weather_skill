@@ -157,7 +157,7 @@ def csv_reader_params(filepath, source, forecast_type):
 
 	return url, params, extra_info # Info not found
 
-def csv_reader_country_codes(filepath, headerInput, inputInfo, headerOutput):
+def csv_reader_IO(filepath, headerInput, inputInfo, headerOutput):
 	"""
 	Reads an standard column csv using the names of the headers and the input to get the output.
 	
@@ -168,10 +168,12 @@ def csv_reader_country_codes(filepath, headerInput, inputInfo, headerOutput):
 
 	@return result: Result of the request.
 	"""
+	rospy.logdebug("[Csv Reader] File path: %s" % filepath)
+	rospy.logdebug("[Csv Reader] HeaderInput: %s, Input: %s, HeaderOutput: %s" % (headerInput, inputInfo, headerOutput))
 
 	# If file does not exist
 	if(not SysOperations().path_exists(filepath)):
-		rospy.logerr("[Csv Reader] Csv Reader Country Codes ERROR: File does not exist")
+		rospy.logerr("[Csv Reader] Csv Reader ERROR: File does not exist")
 		return -1 # Fail (-1)
 
 	################## Open csv ##################
@@ -197,10 +199,10 @@ def csv_reader_country_codes(filepath, headerInput, inputInfo, headerOutput):
 				continue
 			# Search the info requested
 			if(row[headerInput_col].lower() == str(inputInfo).lower()): # Info found
-				rospy.logdebug("[Csv Reader] Info '" + str(inputInfo) + "' from '" + headerInput + "' found: " + str(row[headerOutput_col]))
+				rospy.logdebug("[Csv Reader] Info found: " + str(row[headerOutput_col]))
 				return row[headerOutput_col]
 
-	rospy.logwarn("[Csv Reader] Csv Reader Country Codes ERROR: Info '" + str(inputInfo) + "' from '" + headerInput + "' not found")
+	rospy.logerr("[Csv Reader] Csv Reader ERROR: Info NOT found")
 	return -1
 
 def csv_reader_conditions(filepath, source, source_code, info_requested):
@@ -286,8 +288,8 @@ if __name__ == '__main__':
 	filepath = data_path + 'conditions_codes_standard.csv'
 	# Get info
 	print(csv_reader_conditions(filepath, 'openweathermap', '503', 'standard_icon'))
-	#___________csv_reader_country_codes___________
+	#___________csv_reader_IO___________
 	filepath = data_path + 'wikipedia-iso-country-codes.csv'
-	print(csv_reader_country_codes(filepath, 'Alpha-2 code', 'ES', 'English short name lower case'))
-	print(csv_reader_country_codes(filepath, 'English short name lower case', 'Spain', 'Alpha-2 code'))
+	print(csv_reader_IO(filepath, 'Alpha-2 code', 'ES', 'English short name lower case'))
+	print(csv_reader_IO(filepath, 'English short name lower case', 'Spain', 'Alpha-2 code'))
 	

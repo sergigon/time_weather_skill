@@ -49,10 +49,10 @@ class TimeWeatherSkill(Skill):
 
     # Constants
     _GOAL_MAX_SIZE = 5 # Max size of the goal
-    _ICON_OBTENTION = 0 # Determines the obetention of icons (0: Internet, 1: Local)
+    _ICON_OBTENTION = 1 # Determines the obetention of icons (0: Internet, 1: Local)
 
     # Filenames
-    _CONDITIONS_FILENAME = 'conditions_codes_standard.csv'
+    _CONDITIONS_FILENAME_STR = 'conditions_codes_' # Part name of the file to read the conditions info
 
     def __init__(self):
         """
@@ -67,7 +67,12 @@ class TimeWeatherSkill(Skill):
         rospack = rospkg.RosPack()
         self._pkg_path = rospack.get_path(pkg_name) + '/' # Package path
         self._data_path = self._pkg_path + 'data/' # Data path
-        self._icons_path = self._data_path + 'weather_icons/wikipedia/640x640/' # Icons path
+        self._icons_path = self._data_path + 'weather_icons/' # Icons path
+        self._conditions_path = self._data_path + 'conditions/' # Conditions path
+
+        # Icons settings
+        self.weather_icon_set = 'wikipedia'
+        self.weather_icon_size = '640x640'
 
         # init the skill
         Skill.__init__(self, skill_name, NATURAL)
@@ -115,6 +120,7 @@ class TimeWeatherSkill(Skill):
         @param display: String of the display goal.
         @param weather_dic: Input weather dicionary.
         """
+        print('###### Managing display ######')
 
         ############# Manage displays ###############
         display_vec = list(display) # Divides goal by fields
@@ -147,8 +153,6 @@ class TimeWeatherSkill(Skill):
             temp_c = weather_dic['temp_c'] #
         if 'avgtemp_c' in weather_dic:
             avgtemp_c = weather_dic['avgtemp_c'] #
-        if 'icon' in weather_dic:
-            icon = weather_dic['icon'] #
         if 'is_day' in weather_dic:
             is_day = weather_dic['is_day'] #
         if 'text' in weather_dic:
@@ -180,26 +184,39 @@ class TimeWeatherSkill(Skill):
             #     - code (show photo)                        #
             #     - source (needed to make code conversion)  #
             ##################################################
-            print('Screen selected')
+            print('>> Screen selected')
 
             # Searchs the icon image in local
             if(self._ICON_OBTENTION == 1):
+                rospy.loginfo('Using local icons')
                 if ('code' in weather_dic and 'source' in weather_dic):
-                    code = weather_dic['code'] #
-                    source = weather_dic['source'] #
-                    # Search weather icon (apixu json conditions)
-                    conditions_path = self._data_path + self._CONDITIONS_FILENAME
-                    result = csv_reader_conditions(conditions_path, source, code, 'standard_icon')
-                    if (result != -1):
-                        icon = self._icons_path + ('day/' if (is_day == 1) else 'night/') + str(result) + '.png'
+                    code, source = weather_dic['code'], weather_dic['source'] #
+                    # Create filepaths
+                    cond_source_filepath = self._conditions_path + self._CONDITIONS_FILENAME_STR + source + '.csv'
+                    cond_std_filepath = self._conditions_path + self._CONDITIONS_FILENAME_STR + 'standard' + '.csv'
+                    # Search icon
+                    std_code = csv_reader_IO(cond_source_filepath, 'source code', code, 'standard code') # Search standard code
+                    icon_file = csv_reader_IO(cond_std_filepath, 'standard code', std_code, self.weather_icon_set + ' icon') # Search standard icon file
+                    # Create icon path
+                    if (icon_file != -1):
+                        icon = self._icons_path + '%s/%s/%s/%s' % (self.weather_icon_set, self.weather_icon_size, ('day' if (is_day == 1) else 'night'), icon_file)
+                    else:
+                        rospy.logerr('There has been an error searching the icon')
+                else:
+                    rospy.logerr('To activate local icon, please ask for code and source info')
+            else:
+                rospy.loginfo('Using internet icons')
+                if 'icon' in weather_dic:
+                    icon = weather_dic['icon'] #
+                else:
+                    rospy.logerr('To activate internet icon, please ask for icon info')
 
             print(country_name, city_name, date, temp_c, avgtemp_c, code, icon)
         #############################################
 
         ################# Movement ##################
         if(movement == 1):
-            print('Movement selected')
-            print('makeCA_gesture_info')
+            print('>> Movement selected')
             ca_gesture_info = makeCA_gesture_info('alz_talking_03')
             self.ca_pub.publish(ca_gesture_info)
             rospy.sleep(1)
@@ -220,7 +237,7 @@ class TimeWeatherSkill(Skill):
             #     - avgtemp_c (show temperature in celsius)  #
             #     - text (show condition)                    #
             ##################################################
-            print('Voice selected')
+            print('>> Voice selected')
 
             if(forecast_type == 'current'):
             	weather_speech = 'En ' + str(city_name) + ' hay ' + str(temp_c) + ' grados con ' + str(text)
@@ -234,7 +251,8 @@ class TimeWeatherSkill(Skill):
                     date_speech = 'El día ' + str(day)
             	weather_speech = date_speech + ' va a haber ' + str(temp_c) + ' grados con ' + str(text) + ' en ' + str(city_name)
 
-            print(weather_speech)
+            print('Etts output:')
+            print(' -> ' + weather_speech + ' <-')
 
             ca_info = makeCA_info(weather_speech)
             self.ca_pub.publish(ca_info)

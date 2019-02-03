@@ -93,7 +93,7 @@ def source2standard(source, forecast_type, weather_dic):
 
 		# ########## Common parameters ########## #
 		city_name = weather_dic['location']['name']
-		country_code = csv_reader_country_codes(country_codes_pathfile, 'English short name lower case', weather_dic['location']['country'], 'Alpha-2 code') # Transforms the country name into country code
+		country_code = csv_reader_IO(country_codes_pathfile, 'English short name lower case', weather_dic['location']['country'], 'Alpha-2 code') # Transforms the country name into country code
 		country_name = country_code if (country_code != -1) else weather_dic['location']['country']
 	#################################################################################################
 
@@ -309,7 +309,7 @@ def source2standard(source, forecast_type, weather_dic):
 			
 		# ########## Common parameters ########## #
 		city_name = weather_dic['location']['name']
-		country_code = csv_reader_country_codes(country_codes_pathfile, 'English short name lower case', weather_dic['location']['country'], 'Alpha-2 code') # Transforms the country name into country code
+		country_code = csv_reader_IO(country_codes_pathfile, 'English short name lower case', weather_dic['location']['country'], 'Alpha-2 code') # Transforms the country name into country code
 		country_name = country_code if (country_code != -1) else weather_dic['location']['country']
 	#################################################################################################
 
