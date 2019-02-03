@@ -27,7 +27,7 @@ def location_divider(location):
     """
     Divide the location in city_name and country_name.
 
-    @param location: City to get weather. Format: 'Madrid' or 'Madrid, Spain'.
+    @param location: Location to get weather. Format: 'Madrid' or 'Madrid, Spain'.
 
     @return city_name: Name of the city.
     @return country_name: Name of the country. If not specified, it returns ''.
@@ -46,6 +46,21 @@ def location_divider(location):
             country_name = country_name[1:]
 
     return city_name, country_name
+
+def location_combiner(city_name, country_name):
+    """
+    Combines the city_name and country_name in the location.
+
+    @param city_name: Name of the city.
+    @param country_name: Name of the country.
+
+    @return location: Location to get weather.
+    """
+
+    # Initialize variables
+    location = city_name + ', ' + country_name
+
+    return location
 
 def date_text2num(text):
     """

@@ -53,7 +53,7 @@ class Weather():
 
     # Filenames
     _CACHE_FILENAME_STR = 'cache' # Part name of the file to store the weather data (without extension)
-    _PARAMS_FILENAME = 'weather_sources_params.csv' # Name of the file to store the sources params data
+    _URL_PARAMS_FILENAME = 'weather_sources_params.csv' # Name of the file to store the sources params data
     _COUNTRY_CODES_FILENAME = 'wikipedia-iso-country-codes.csv' # Name of the file to store the country codes data
 
     # Lists
@@ -119,9 +119,10 @@ class Weather():
         
         @return result: Final result.
             - -1: Fail
-            -  0: Url request success
+            - -2: Connection Error
             -  1: City not found
-            -  2: Connection Error
+            -  0: Url request success
+
         @return result_info_dic: Weather dictionary result.
         """
 
@@ -168,17 +169,6 @@ class Weather():
             return 0, r.json()
 
         # Exceptions
-        # City not found #
-        except CityNotFound as e: # City not found
-            rospy.logwarn('[weatherClass] URL request ERROR: City not found (%s)' % e)
-            return 1, {}
-        # Connection error #
-        except requests.exceptions.ConnectionError as e: # Connection Error
-            rospy.logwarn('[weatherClass] URL request ERROR: Connection ERROR (%s)' % e)
-            return 2, {}
-        except requests.ReadTimeout as e: # Timeout
-            rospy.logwarn('[weatherClass] URL request ERROR: Timeout (%s)' % e)
-            return 2, {}
         # Fail #
         except NoParam as e: # Param Not Provided
             rospy.logwarn('[weatherClass] URL request ERROR: Param not provided (%s)' % e)
@@ -193,11 +183,24 @@ class Weather():
             rospy.logerr("MissingSchema; %s" % e)
             return -1, {}
         except GeneralError as e: # General Error
-            rospy.logwarn('[weatherClass] URL request ERROR: General ERROR: (%s)' % e)
+            rospy.logwarn('[weatherClass] URL request ERROR: General ERROR (%s)' % e)
             return -1, {}
         except LimitCalls as e: # Limit of Calls Exceeded
-            rospy.logwarn('[weatherClass] URL request ERROR: Limit of calls exceded: (%s)' % e)
+            rospy.logwarn('[weatherClass] URL request ERROR: Limit of calls exceded (%s)' % e)
             return -1, {}
+        # Connection error #
+        except requests.exceptions.ConnectionError as e: # Connection Error
+            rospy.logwarn('[weatherClass] URL request ERROR: Connection ERROR (%s)' % e)
+            return -2, {}
+        except requests.ReadTimeout as e: # Timeout
+            rospy.logwarn('[weatherClass] URL request ERROR: Timeout (%s)' % e)
+            return -2, {}
+        # City not found #
+        except CityNotFound as e: # City not found
+            rospy.logwarn('[weatherClass] URL request ERROR: City not found (%s)' % e)
+            return 1, {}
+        
+        
 
     def _json_searcher(self, list_json, name):
         """
@@ -219,12 +222,12 @@ class Weather():
 
         return -1
 
-    def _local_request(self, city_name, country_name = ''):
+    def _local_request(self, city_name, country_code = ''):
         """
         Request local method. Search by the city and country names.
 
-        @param city_name: City to calculate weather.
-        @param country_name: Country to calculate weather.
+        @param city_name: City to get weather.
+        @param country_code: Country code to get weather.
 
         @return result: Final result.
         @return result_info_dic: Weather dictionary result.
@@ -233,19 +236,18 @@ class Weather():
         # Initialize variables
         result, result_info_dic = -1, {}
         found = False
-        country_specified = False # Indicates if the country has been specified
-        local_country_name = rospy.get_param(self._LOCAL_COUNTRY_PARAM) # Get local country name
+        local_country_code = rospy.get_param(self._LOCAL_COUNTRY_PARAM) # Get local country name
 
         # Json files list in the data folder
         list_json = self._file_manager.ls_json(self._cache_path)
 
         # File to search creation (Format ex: 'cache_madrid_es.json')
-        if (country_name != ''): # Country specified
-            cache_name = self._CACHE_FILENAME_STR + '_' + city_name.lower().replace(' ', '-') + '_' + country_name.lower().replace(' ', '-') # cache_city_country
+        if (country_code != ''): # Country specified
+            cache_name = self._CACHE_FILENAME_STR + '_' + city_name.lower().replace(' ', '-') + '_' + country_code.lower().replace(' ', '-') # cache_city_country
             rospy.logdebug('Country specified: Searching %s' % cache_name)
             cache_filename = self._json_searcher(list_json, cache_name)
         else: # Country NOT specified
-            cache_name = self._CACHE_FILENAME_STR + '_' + city_name.lower().replace(' ', '-') + '_' + local_country_name.lower().replace(' ', '-') # cache_city_local-country
+            cache_name = self._CACHE_FILENAME_STR + '_' + city_name.lower().replace(' ', '-') + '_' + local_country_code.lower().replace(' ', '-') # cache_city_local-country
             rospy.logdebug('Country NOT specified: Searching %s (local country)' % cache_name)
             cache_filename = self._json_searcher(list_json, cache_name)
             if (cache_filename == -1):
@@ -284,16 +286,18 @@ class Weather():
 
         # Initialize variables
         lang = rospy.get_param(self._LANGUAGE_PARAM)
-        city_name, country_name = location_divider(location) # Divide the location into city and country names
+        local_country_code = rospy.get_param(self._LOCAL_COUNTRY_PARAM) # Get local country name
+        city_name, country_code = location_divider(location) # Divide the location into city and country names
         # Transforms the country name into country code
         country_codes_filepath = self._params_path + self._COUNTRY_CODES_FILENAME
-        if(country_name != ''):
-	        country_code = csv_reader_country_codes(country_codes_filepath, 'English short name lower case', country_name, 'Alpha-2 code') # If
-	        country_name = country_code if (country_code != -1) else country_name
+        if(country_code != ''): # Country code specified
+            # Country name to code conversion, if needed
+	        country_code_aux = csv_reader_country_codes(country_codes_filepath, 'English short name lower case', country_code, 'Alpha-2 code') 
+	        country_code = country_code_aux if (country_code_aux != -1) else country_code
 
         ################### Make local request ###################
-        print("-- Making local request: " + city_name + ", " + country_name + ' --')
-        local_result, local_result_info_dic = self._local_request(city_name, country_name)
+        print("##--## Making local request: " + city_name + ", " + country_code + ' ##--##')
+        local_result, local_result_info_dic = self._local_request(city_name, country_code)
 
         # ############### Local request success ################ #
         #if(local_result == 0):
@@ -391,12 +395,13 @@ class Weather():
 
         ################## Make URL requests #####################
         url_result, url_result_info_dic = -1, {}
-        params_filepath = self._params_path + self._PARAMS_FILENAME
-        # Selects the source from the source list
-        for source in self._SOURCE_LIST:
-            print("-- Making URL request to: '" + source + "' --")
+        params_filepath = self._params_path + self._URL_PARAMS_FILENAME # Filepath for url request parameters
 
-            ############ Get params ############
+        # ################### Source list ################### #
+        for source in self._SOURCE_LIST:
+            print("##--## Making URL request to: '" + source + "' ##--##")
+
+            ################## Get params ##################
             print(">> Getting params")
             url, params, extra_info = csv_reader_params(params_filepath, source, forecast_type)
             # Source not found in the csv
@@ -407,51 +412,104 @@ class Weather():
             if(forecast_type == 'forecast' and (date < 0 or date >= int(extra_info['limit_forecast_days']))):
                 rospy.logwarn("Request Weather ERROR: Forecast day out of range (" + source + ": " + extra_info['limit_forecast_days'] + " limit forecast days), request denied")
                 continue # Jumps to the next source
+            ################################################
 
-            ########### Update params ##########
-            # If the param value starts with   #
-            # '--' the value is turned into    #
-            # the one specified in the code    #
-            ####################################
-            for key in params:
-                if(params[key][:2] == '__'):
-                    if(params[key][2:] == 'location'):
-                        params.update({key: location})
-                    elif(params[key][2:] == 'lang'):
-                        params.update({key: lang})
+            ################### Request ####################
+            n_attempts = 1 # Number of attempts for conexion errors
+            only_city = False # Variable to set only city location
+            new_request = True # Indicate if make new request with same source
 
-            ############# Request ##############
-            url_result, url_result_info_dic = self._url_request(source, url, params)
-            rospy.logdebug('[weatherClass] url_result_info_dic: ' + str(url_result_info_dic))
+            if(country_code == ''): # Country NOT specified
+                location_new = location_combiner(city_name, local_country_code)
+                rospy.logdebug('Country not specified. Searching with local country (%s)' % location_new)
+                only_city = True # If city not found, search without the country
+            else: # Country specified
+                location_new = location_combiner(city_name, country_code)
+                rospy.logdebug('Country specified (%s)' % location_new)
 
-            ####### Request success #######
-            if(url_result == 0): # URL request success
-                # Change weather format to standard format
-                print('Conversion \'' + source + '\' dictionary to standard')
-                url_result_info_dic = source2standard(source, forecast_type, url_result_info_dic)
-                # Checks if the conversion has failed
-                if(url_result_info_dic == -1):
-                    rospy.logwarn('Request Weather ERROR: ' + 'Source \'' + source + '\' to standard conversion failed')
-                    continue
+            # ################ Request loop ################# #
+            while(new_request == True):
+                new_request = False # New source
+                ########### Update params ##########
+                # If the param value starts with   #
+                # '__' the value is turned into    #
+                # the one specified in the code    #
+                ####################################
+                for key in params:
+                    if(params[key][:2] == '__'):
+                        if(params[key][2:] == 'location'):
+                            params.update({key: location_new})
+                        elif(params[key][2:] == 'lang'):
+                            params.update({key: lang})
 
-                # Updates the local dictionary if it exists (if it does not exist, 'local_result_info_dic' will be empty, so no problem)
-                # Update local dic variable with new content
-                if 'current' in url_result_info_dic:
-                    local_result_info_dic['current'] = url_result_info_dic['current']
-                if 'forecast' in url_result_info_dic:
-                    local_result_info_dic['forecast'] = url_result_info_dic['forecast']
-                local_result_info_dic['common'] = url_result_info_dic['common']
-                url_result_info_dic = local_result_info_dic # Change the name of the variable
+                url_result, url_result_info_dic = self._url_request(source, url, params)
+                rospy.logdebug('[weatherClass] url_result_info_dic: ' + str(url_result_info_dic))
+                ################################################
 
-                ##### Save info #####
-                # Saves extra info in the file
-                extra_dic = {
-                    'lang': lang
-                }
-                # Saves the content in a local file
-                self._update_cache(self._cache_path, url_result_info_dic, extra_dic)
-                return url_result, url_result_info_dic
+                ####### Request result management #######
+                ############################
+                # -1: Fail                 #
+                # -2: Connection Error     #
+                #  1: City not found       #
+                #  0: Url request success  #
+                ############################
+                # -- Request success -- #
+                if(url_result == 0):
+                    rospy.logdebug('Request success')
+                    # Change weather format to standard format
+                    print('Conversion \'' + source + '\' dictionary to standard')
+                    url_result_info_dic = source2standard(source, forecast_type, url_result_info_dic)
+                    # Checks if the conversion has failed
+                    if(url_result_info_dic == -1):
+                        rospy.logwarn('Request Weather ERROR: ' + 'Source \'' + source + '\' to standard conversion failed')
+                    else:
+                        ########### Updates cache ##########
+                        # Updates the local dictionary if it exists (if it does not exist, 'local_result_info_dic' will be empty, so no problem)
+                        # Update local dic variable with new content
+                        if 'current' in url_result_info_dic:
+                            local_result_info_dic['current'] = url_result_info_dic['current']
+                        if 'forecast' in url_result_info_dic:
+                            local_result_info_dic['forecast'] = url_result_info_dic['forecast']
+                        local_result_info_dic['common'] = url_result_info_dic['common']
+                        url_result_info_dic = local_result_info_dic # Change the name of the variable
+                        ##### Save info #####
+                        # Saves extra info in the file
+                        extra_dic = {
+                            'lang': lang
+                        }
+                        # Saves the content in a local file
+                        self._update_cache(self._cache_path, url_result_info_dic, extra_dic)
+                        ####################################
+                        return url_result, url_result_info_dic
 
+                # -- Request Fail -- #
+                elif(url_result == -1):
+                    rospy.logerr('Request Weather ERROR: Request fail')
+
+                # -- Connection Error -- #
+                elif(url_result == -2):
+                    rospy.logwarn('Request Weather ERROR: Connection Error (attempt %s)' % n_attempts)
+                    if(n_attempts<=2):
+                        n_attempts+=1
+                        new_request = True # Request again
+                    else:
+                        rospy.logwarn('Request Weather ERROR: Connection Error. Exceeded attemps limit')
+
+                # -- City not found -- #
+                elif(url_result == 1):
+                    rospy.logwarn('Request Weather ERROR: City Not Found Error (%s)' % location_new)
+                    if(only_city): # Location without country asked
+                        location_new = city_name # Set location without the country
+                        rospy.logdebug('Searching location without country (%s)' % location_new)
+                        only_city = False # Set variable to not make another request
+                        new_request = True # Request again
+
+            # ############################################### #
+            rospy.logwarn('Searching next source')
+
+        # ################################################### #
+        # No more sources in the list
+        rospy.logerr('[weatherClass] No more sources')
         return -1, {}
 
     def _get_info(self, location, forecast_type, date, info_required):

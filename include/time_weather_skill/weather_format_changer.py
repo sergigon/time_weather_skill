@@ -110,7 +110,11 @@ def source2standard(source, forecast_type, weather_dic):
 			c_date = str(nowtz.year) + '-' + str(nowtz.month) + '-' + str(nowtz.day)
 			c_temp_c = weather_dic['main']['temp']
 			c_is_day = 1 if (weather_dic['sys']['sunrise'] < weather_dic['dt'] < weather_dic['sys']['sunset']) else 0
-			c_precip_mm = weather_dic['rain']['1h'] if ('rain' in weather_dic) else 0
+			if ('rain' in weather_dic):
+				c_precip_mm = weather_dic['rain']['3h'] if ('3h' in weather_dic['rain']) else 0
+				c_precip_mm = weather_dic['rain']['1h'] if ('1h' in weather_dic['rain']) else 0
+			else:
+				c_precip_mm = 0
 			c_text = weather_dic['weather'][0]['description'].lower()
 			c_code = weather_dic['weather'][0]['id']
 			c_icon = 'http://openweathermap.org/img/w/' + str(weather_dic['weather'][0]['icon']) + '.png'
