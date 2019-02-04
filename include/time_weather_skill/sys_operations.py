@@ -119,7 +119,6 @@ if __name__ == '__main__':
 		weather_file = data_path + 'prueba.json'
 
 		json_manager = SysOperations()
-		#createJson.write_json()
 		# Search files
 		print(json_manager.ls(data_path))
 		print()

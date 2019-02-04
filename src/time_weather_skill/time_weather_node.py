@@ -13,7 +13,7 @@ __status__ = "Development"
 
 from skill.skill import Skill, ActionlibException, NATURAL
 from time_weather_skill.weatherClass import Weather # Weather class
-from time_weather_skill.general_functions import makeCA_info, makeCA_gesture_info # Voice communication CA functions
+from time_weather_skill.general_functions import makeCA_etts_info, makeCA_gesture_info # Voice communication CA functions
 from time_weather_skill.sys_operations import SysOperations
 from time_weather_skill.datetime_manager import DatetimeManager
 from time_weather_skill.general_functions import *
@@ -38,6 +38,12 @@ pkg_name = 'time_weather_skill'
 # Skill name (declare this only if the name is different of 'pkg_name')
 skill_name = "time_weather_skill"
 
+# Exceptions
+class GoalError(Exception):
+    pass
+class GeneralError(Exception):
+    pass
+
 class TimeWeatherSkill(Skill):
     """
     TimeWeather skill class.
@@ -48,7 +54,7 @@ class TimeWeatherSkill(Skill):
     _result = time_weather_skill.msg.TimeWeatherResult()
 
     # Constants
-    _GOAL_MAX_SIZE = 5 # Max size of the goal
+    _GOAL_MAX_SIZE = 4 # Max size of the goal
     _ICON_OBTENTION = 1 # Determines the obetention of icons (0: Internet, 1: Local)
 
     # Filenames
@@ -63,20 +69,21 @@ class TimeWeatherSkill(Skill):
         self._as = None # SimpleActionServer variable
         self._goal = "" # Goal a recibir
 
-        # Paths
+        # Local paths
         rospack = rospkg.RosPack()
         self._pkg_path = rospack.get_path(pkg_name) + '/' # Package path
         self._data_path = self._pkg_path + 'data/' # Data path
-        self._icons_path = self._data_path + 'weather_icons/' # Icons path
+        #self._icons_path = self._data_path + 'weather_icons/' # Icons path
         self._conditions_path = self._data_path + 'conditions/' # Conditions path
+        # Tablet paths
+        self._icons_path = 'image/weather/' # Icons path
 
         # Icons settings
-        self.weather_icon_set = 'material_design'
-        self.weather_icon_size = '640x640'
+        self.weather_icon_set = 'wikipedia'
+        self.weather_icon_size = '480x480'
 
         # init the skill
         Skill.__init__(self, skill_name, NATURAL)
-
 
     def create_msg_srv(self):
         """
@@ -87,8 +94,11 @@ class TimeWeatherSkill(Skill):
         print("create_msg_srv() called")
 
         # publishers and subscribers
-        self.ca_pub = rospy.Publisher("hri_manager/ca_activations", CA, queue_size=10) # CA publisher
-        self.ca_deactivation_pub = rospy.Publisher("hri_manager/ca_deactivations", String, queue_size=10) # CA deactivation publisher
+        self.ca_pub = rospy.Publisher(
+            "hri_manager/ca_activations", CA, queue_size=10)# CA publisher
+
+        self.ca_deactivation_pub = rospy.Publisher(
+            "hri_manager/ca_deactivations", String, queue_size=10) # CA deactivation publisher
 
         #self.sub_response = rospy.Subscriber(robot + "hri_manager/response", CA, self.response_callback) # CA subscriber
 
@@ -113,12 +123,12 @@ class TimeWeatherSkill(Skill):
             
         print("shutdown_msg_srv() called")
 
-    def _manage_display(self, forecast_type, date_i, display, weather_dic):
+    def _manage_display(self, forecast_type, date_i, display, standard_weather_dic):
         """
         Manager of the display.
     
         @param display: String of the display goal.
-        @param weather_dic: Input weather dicionary.
+        @param standard_weather_dic: Input weather dicionary in standard format.
         """
         print('###### Managing display ######')
 
@@ -129,41 +139,54 @@ class TimeWeatherSkill(Skill):
         voice = int(display_vec[2])
         #############################################
 
-        # Initialize fields content
-        # Common
-        country_name, city_name, date, day, month, year, temp_c, avgtemp_c = '', '', '', '', '', '', '', ''
-        # Screen
-        code, icon, is_day = '', '', 1 # By default it is day (for images)
-        # Voice
-        text = ''
-        # Params
-        date_i = date_text2num(date_i)
+        # Initialize fields content and checks if all is well readed
+        try:
+            country_code = standard_weather_dic['common']['country_code'] #
+            city_name = standard_weather_dic['common']['city_name'] #
+            source = standard_weather_dic['common']['source'] #
+            if(forecast_type == 'current'):
+                date = standard_weather_dic['current']['date'] #
+                day = str(DatetimeManager(date).day_int())
+                month = str(DatetimeManager(date).month_int())
+                year = str(DatetimeManager(date).year_int())
+                temp_c = standard_weather_dic['current']['temp_c'] #
+                int_temp_c, dec_temp_c = str(temp_c).split('.')
+                precip_mm = standard_weather_dic['current']['precip_mm'] #
+                is_day = standard_weather_dic['current']['is_day'] #
+                text = standard_weather_dic['current']['text'] #
+                code = standard_weather_dic['current']['code'] #
+                icon = standard_weather_dic['current']['icon'] #
+                
+            if(forecast_type == 'forecast'):
+                date = standard_weather_dic['forecast']['forecastday'][date_i]['date'] #
+                day = str(DatetimeManager(date).day_int())
+                month = str(DatetimeManager(date).month_int())
+                year = str(DatetimeManager(date).year_int())
+                avgtemp_c = standard_weather_dic['forecast']['forecastday'][date_i]['avgtemp_c'] #
+                int_avgtemp_c, dec_avgtemp_c = str(avgtemp_c).split('.')
+                mintemp_c = standard_weather_dic['forecast']['forecastday'][date_i]['mintemp_c'] #
+                int_mintemp_c, dec_mintemp_c = str(mintemp_c).split('.')
+                maxtemp_c = standard_weather_dic['forecast']['forecastday'][date_i]['maxtemp_c'] #
+                int_maxtemp_c, dec_maxtemp_c = str(maxtemp_c).split('.')
+                totalprecip_mm = standard_weather_dic['forecast']['forecastday'][date_i]['totalprecip_mm'] #
+                is_day = 1
+                text = standard_weather_dic['forecast']['forecastday'][date_i]['text'] #
+                code = standard_weather_dic['forecast']['forecastday'][date_i]['code'] #
+                icon = standard_weather_dic['forecast']['forecastday'][date_i]['icon'] #
 
-        # Fill screen fields content
-        if 'country_name' in weather_dic:
-            country_name = weather_dic['country_name'] #
-        if 'city_name' in weather_dic:
-            city_name = weather_dic['city_name'] #
-        if 'date' in weather_dic:
-            date = weather_dic['date'] #
-            day = DatetimeManager(date).day()
-            month = DatetimeManager(date).month()
-            year = DatetimeManager(date).year()
-        if 'temp_c' in weather_dic:
-            temp_c = weather_dic['temp_c'] #
-        if 'avgtemp_c' in weather_dic:
-            avgtemp_c = weather_dic['avgtemp_c'] #
-        if 'is_day' in weather_dic:
-            is_day = weather_dic['is_day'] #
-        if 'text' in weather_dic:
-            text = weather_dic['text'] # 
+        except KeyError as e:
+            rospy.logwarn('[weatherClass] Manage display ERROR: Key Error (%s)' % e)
+            return -1
+        except IndexError as e:
+            rospy.logwarn('[weatherClass] Manage display ERROR: Index Error (%s)' % e)
+            return -1
 
         ################# Screen ####################
         if(screen == 1):
             ##################################################
             # Info to show:                                  #
             # + Current:                                     #
-            #     - country_name (show country name)         #
+            #     - country_code (show country name)         #
             #     - city_name (show city name)               #
             #     - date (show date)                         #
             #     - day (show day)                           #
@@ -174,7 +197,7 @@ class TimeWeatherSkill(Skill):
             #     - source (needed to make code conversion)  #
             #     - is_day (change photo if night)           #
             # + Forecast:                                    #
-            #     - country_name (show country name)         #
+            #     - country_code (show country name)         #
             #     - city_name (show city name)               #
             #     - date (show date)                         #
             #     - day (show day)                           #
@@ -186,11 +209,12 @@ class TimeWeatherSkill(Skill):
             ##################################################
             print('>> Screen selected')
 
-            # Searchs the icon image in local
-            if(self._ICON_OBTENTION == 1):
-                rospy.loginfo('Using local icons')
-                if ('code' in weather_dic and 'source' in weather_dic):
-                    code, source = weather_dic['code'], weather_dic['source'] #
+            # Initialize screen variables
+            image_url, image_type = '', '' 
+            try:
+                # Icon search
+                if(self._ICON_OBTENTION == 1): # Local tablet search
+                    rospy.loginfo('Using local icons')
                     # Create filepaths
                     cond_source_filepath = self._conditions_path + self._CONDITIONS_FILENAME_STR + source + '.csv'
                     cond_std_filepath = self._conditions_path + self._CONDITIONS_FILENAME_STR + 'standard' + '.csv'
@@ -199,19 +223,26 @@ class TimeWeatherSkill(Skill):
                     icon_file = csv_reader_IO(cond_std_filepath, 'standard code', std_code, self.weather_icon_set + ' icon') # Search standard icon file
                     # Create icon path
                     if (icon_file != -1):
-                        icon = self._icons_path + '%s/%s/%s/%s' % (self.weather_icon_set, self.weather_icon_size, ('day' if (is_day == 1) else 'night'), icon_file)
+                        image_url = self._icons_path + '%s/%s/%s/%s' % (self.weather_icon_set, self.weather_icon_size, ('day' if (is_day == 1) else 'night'), icon_file)
+                        image_type = 'image'
                     else:
-                        rospy.logerr('There has been an error searching the icon')
-                else:
-                    rospy.logerr('To activate local icon, please ask for code and source info')
-            else:
-                rospy.loginfo('Using internet icons')
-                if 'icon' in weather_dic:
-                    icon = weather_dic['icon'] #
-                else:
-                    rospy.logerr('To activate internet icon, please ask for icon info')
+                        raise GeneralError('There has been an error searching the icon')
+                else: # Internet search
+                    rospy.loginfo('Using internet icons')
+                    image_url, image_type = icon, 'web'
 
-            print(country_name, city_name, date, temp_c, avgtemp_c, code, icon)
+                # Show tablet info
+                if(forecast_type == 'current'):
+                	print(country_code, city_name, date, temp_c, image_url)
+                	ca_info = makeCA_tablet_info(image_url, image_type)
+                elif(forecast_type == 'forecast'):
+                	print(country_code, city_name, date, avgtemp_c, mintemp_c, maxtemp_c, image_url)
+                	ca_info = makeCA_tablet_info(image_url, image_type)
+                
+                self.ca_pub.publish(ca_info)
+                rospy.sleep(1)
+            except GeneralError as e: # General Error
+                rospy.logwarn('[%s] ManageDisplay: Not displaying on tablet (%s)' % (skill_name, e))
         #############################################
 
         ################# Movement ##################
@@ -240,24 +271,66 @@ class TimeWeatherSkill(Skill):
             print('>> Voice selected')
 
             if(forecast_type == 'current'):
-            	weather_speech = 'En ' + str(city_name) + ' hay ' + str(temp_c) + ' grados con ' + str(text)
+                weather_speech = 'En ' + str(city_name) + ' hay ' + str(int_temp_c) + ' coma ' + str(dec_temp_c) + ' grados'
             if(forecast_type == 'forecast'):
-            	date_speech = ''
-            	if(date_i == 0):
+                date_speech = ''
+                if(date_i == 0):
                     date_speech = 'Hoy'
                 elif(date_i == 1):
                     date_speech = 'Mañana'
                 else:
                     date_speech = 'El día ' + str(day)
-            	weather_speech = date_speech + ' va a haber ' + str(avgtemp_c) + ' grados con ' + str(text) + ' en ' + str(city_name)
+                weather_speech = (str(date_speech) + ' van a haber temperaturas máximas de ' + str(int_maxtemp_c) + ' coma '
+                    + str(dec_maxtemp_c) + ' grados y mínimas de ' + str(int_mintemp_c) + ' coma '
+                    + str(dec_mintemp_c) + ' en ' + str(city_name))
 
             print('Etts output:')
             print(' -> ' + weather_speech + ' <-')
 
-            ca_info = makeCA_info(weather_speech)
+            ca_info = makeCA_etts_info(str(weather_speech))
             self.ca_pub.publish(ca_info)
             rospy.sleep(1)
         #############################################
+
+    def _goal_handler(self, goal):
+        """
+        Function to handle the goal. If some field is wrong the result is -1, else 0.
+        """
+        location, forecast_type, date, display = '', '', '', ''
+
+        try:
+            goal_vec = goal.command.split("/") # Divides goal by fields
+            location = goal_vec[0] # Location ('madrid', or 'madrid, es')
+            forecast_type = goal_vec[1] # Forecast or current info
+            date = goal_vec[2] # Date
+            display = goal_vec[3] # Display info
+            # Check location
+            # Check forecast_type
+            if(forecast_type != 'current' and forecast_type != 'forecast'):
+                raise GoalError('%s is not a forecast type' % forecast_type)
+            # Check date
+            try:
+                date = date_text2num(date) # Date
+            except ValueError as e:
+                raise GoalError('%s is not a number' % date)
+            # Check display
+            display_vec = list(display) # Divides goal by fields
+            if(len(display_vec)!=3):
+                raise GoalError('Display has not the appropriate size: %s' % display)
+            for display_i in display_vec:
+                if(display_i != '0' and display_i != '1'):
+                    raise GoalError('Display has not the appropriate value: %s' % display)
+
+        except IndexError as e:
+            rospy.logerr('[%s] Goal Handler: Goal NOT completed (%s)' % (skill_name, e))
+            return -1, location, forecast_type, date, display
+
+        except GoalError as e:
+            rospy.logerr('[%s] Goal Handler: Goal content wrong (%s)' % (skill_name, e))
+            return -1, location, forecast_type, date, display
+
+        # Goal appropriate
+        return 0, location, forecast_type, date, display
 
     def execute_cb(self, goal):
         """
@@ -288,30 +361,23 @@ class TimeWeatherSkill(Skill):
                 #==================================================#
                 
                 ################ Processes the goal ################
-                goal_vec = goal.command.split("/") # Divides goal by fields
-                if(len(goal_vec) >= self._GOAL_MAX_SIZE-1): # Check if all fields (except display) are completed
-                    ################### Weather ####################
-                    location = goal_vec[0] # City name
-                    forecast_type = goal_vec[1] # Forecast or current info
-                    date = goal_vec[2] # Date
-                    info_required = goal_vec[3] # Info wanted
-                    # Get weather info
-                    self._result.result, result_info_dic = Weather(self._data_path)._get_info(location, forecast_type, date, info_required)
-                    if(self._result.result != 0): # Fail
+                result, location, forecast_type, date, display = self._goal_handler(goal)
+
+                if(result == 0):
+                    ################ Weather ################
+                    # Get weather standard data
+                    self._result.result, result_info_dic = Weather(self._data_path)._request_weather(location, forecast_type, date) # Get the weather info
+                    if(self._result.result == 0): # Success
+                        ################ Display ################
+                        self._manage_display(forecast_type, date, display, result_info_dic)
+                        
+                    else: # Fail
                         rospy.logerr('[%s] Weather ERROR ' % pkg_name)
-                    else:
-                        if(len(goal_vec) >= self._GOAL_MAX_SIZE): # Check if all fields are completed
-                            ################ Display ################
-                            display = goal_vec[4] # Display info
-                            self._manage_display(forecast_type, date, display, result_info_dic)
-                        else:
-                            rospy.logwarn('[%s] Display not specified ' % pkg_name)
 
                 else:
-                    rospy.logerr('[%s] Goal size not completed ' % pkg_name)
+                    rospy.logerr('[%s] Goal not appropriate ' % pkg_name)
                     self._result.result = -1 # Fail
                     result_info_dic = {}
-
                 #==================================================#
             
             ######### Si se ha hecho un preempted o cancel: ########

@@ -58,8 +58,8 @@ class Weather():
     _SOURCE_LIST = ['apixu', 'openweathermap', 'apixu'] # List of the sources
     _UPDATE_HOURS = [23, 19, 14, 9, 4] # List of hours for current request
     _INFO_BASIC_LIST = {
-        'current': ['date', 'temp_c', 'is_day', 'text', 'code', 'city_name', 'country_name', 'last_updated', 'icon', 'source'], # Basic current list
-        'forecast': ['date', 'avgtemp_c', 'text', 'code', 'city_name', 'country_name', 'last_updated', 'icon', 'source', 'mintemp_c', 'maxtemp_c'] # Basic advanced list
+        'current': ['date', 'temp_c', 'is_day', 'text', 'code', 'city_name', 'country_code', 'last_updated', 'icon', 'source'], # Basic current list
+        'forecast': ['date', 'avgtemp_c', 'text', 'code', 'city_name', 'country_code', 'last_updated', 'icon', 'source', 'mintemp_c', 'maxtemp_c'] # Basic advanced list
         }
     _INFO_ADVANCED_LIST = copy.deepcopy(_INFO_BASIC_LIST)
     _INFO_ADVANCED_LIST['current'].extend(['precip_mm']) # Advanced current list
@@ -96,7 +96,7 @@ class Weather():
         """
         
         # Define filename
-        filename = self._CACHE_FILENAME_STR + '_' + input_dic['common']['city_name'].lower().replace(' ', '-')  + '_' +  input_dic['common']['country_name'].lower().replace(' ', '-') 
+        filename = self._CACHE_FILENAME_STR + '_' + input_dic['common']['city_name'].lower().replace(' ', '-')  + '_' +  input_dic['common']['country_code'].lower().replace(' ', '-') 
         filepath = path + filename + '.json'
 
         # Add extra info

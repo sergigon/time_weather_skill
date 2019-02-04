@@ -96,8 +96,8 @@ def source2standard(source, forecast_type, weather_dic):
 
 		# ########## Common parameters ########## #
 		city_name = weather_dic['location']['name']
-		country_code = csv_reader_IO(country_codes_pathfile, 'English short name lower case', weather_dic['location']['country'], 'Alpha-2 code') # Transforms the country name into country code
-		country_name = country_code if (country_code != -1) else weather_dic['location']['country']
+		code_aux = csv_reader_IO(country_codes_pathfile, 'English short name lower case', weather_dic['location']['country'], 'Alpha-2 code') # Transforms the country name into country code
+		country_code = code_aux if (code_aux != -1) else weather_dic['location']['country']
 	#################################################################################################
 
 	######################################### OpenWeatherMap ########################################
@@ -123,7 +123,7 @@ def source2standard(source, forecast_type, weather_dic):
 			c_icon = 'http://openweathermap.org/img/w/' + str(weather_dic['weather'][0]['icon']) + '.png'
 			c_last_updated =  int((now_utc - epoch).total_seconds())
 			city_name = weather_dic['name']
-			country_name = weather_dic['sys']['country']
+			country_code = weather_dic['sys']['country']
 			
 		# ########## Forecast weather ########## #
 		if(forecast_type == 'forecast'):
@@ -205,7 +205,7 @@ def source2standard(source, forecast_type, weather_dic):
 			f_last_updated = int((now_utc - epoch).total_seconds())
 			f_forecast_days = len(days)
 			city_name = weather_dic['city']['name']
-			country_name = weather_dic['city']['country']
+			country_code = weather_dic['city']['country']
 	#################################################################################################
 
 	########################################### No source ###########################################
@@ -269,7 +269,7 @@ def source2standard(source, forecast_type, weather_dic):
 	#=============# Common parameters #==============#
 	common = {
 		'city_name': city_name, # 'Madrid'
-		'country_name': country_name, # 'ES'
+		'country_code': country_code, # 'ES'
 		'source': source # 'apixu'
 	}
 	standard_weather_dic.update({'common': common}) # Saves data in standard_weather_dic

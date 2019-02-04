@@ -99,7 +99,7 @@ def makeCA_etts_info(etts_text):
     rospy.logdebug("Sending CA_info")
     return msg
 
-def makeCA_tablet_info(image):
+def makeCA_tablet_info(image_url, tablet_type):
     now = rospy.get_rostime().nsecs
 
     msg = CA()
@@ -111,12 +111,12 @@ def makeCA_tablet_info(image):
     
     kvp = kvpa()
     kvp.key = "tablet_type"
-    kvp.value = 'image'
+    kvp.value = tablet_type
     msg.values.append(kvp)
 
     kvp = kvpa()
     kvp.key = "tablet_url"
-    kvp.value = image
+    kvp.value = image_url
     msg.values.append(kvp)
     return msg
     

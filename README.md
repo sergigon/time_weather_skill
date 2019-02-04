@@ -102,12 +102,12 @@ Forecast parameters:
 
 Common parameters:
 + `'city_name'`: Name of the city ('Madrid')
-+ `'country_name'`: Name of the country ('United_Kingdom')
++ `'country_code'`: Code of the country ('UK')
 
 Lists:
 + `'basic'`: Basic info. It includes the following data:
-  + Current: `'date'`, `'temp_c'`, `'is_day'`, `'text'`, `'code'`, `'city_name'`, `'country_name'`, `'last_updated'`
-  + Forecast: `'date'`, `'avgtemp_c'`, `'text'`, `'code'`, `'city_name'`, `'country_name'`, `'last_updated'`
+  + Current: `'date'`, `'temp_c'`, `'is_day'`, `'text'`, `'code'`, `'city_name'`, `'country_code'`, `'last_updated'`
+  + Forecast: `'date'`, `'avgtemp_c'`, `'text'`, `'code'`, `'city_name'`, `'country_code'`, `'last_updated'`
 + `'advanced'`: Advanced info. It includes the following data:
   + Current: `Basic list`, `'precip_mm'`
   + Forecast: `Basic list`, `'mintemp_c'`, `'maxtemp_c'`, `'totalprecip_mm'`
