@@ -82,7 +82,7 @@ def date_text2num(text):
 
     return date
 
-def makeCA_info(etts_text):
+def makeCA_etts_info(etts_text):
     now = rospy.get_rostime().nsecs
 
     msg = CA()
@@ -97,6 +97,27 @@ def makeCA_info(etts_text):
     kvp.value = etts_text
     msg.values.append(kvp)
     rospy.logdebug("Sending CA_info")
+    return msg
+
+def makeCA_tablet_info(image):
+    now = rospy.get_rostime().nsecs
+
+    msg = CA()
+    msg.type = "robot_giving_info"
+    msg.ca_name = str(now)
+    msg.duration = 0
+    msg.priority = 1
+    msg.emitter = "time_weather_ca"
+    
+    kvp = kvpa()
+    kvp.key = "tablet_type"
+    kvp.value = 'image'
+    msg.values.append(kvp)
+
+    kvp = kvpa()
+    kvp.key = "tablet_url"
+    kvp.value = image
+    msg.values.append(kvp)
     return msg
     
 def makeCA_gesture_info(gesture):

@@ -21,6 +21,7 @@ Sources:
 ## Installation
 ### Astral:
 `pip install astral`
+`sudo pip install tzwhere`
 
 ## Run
 
