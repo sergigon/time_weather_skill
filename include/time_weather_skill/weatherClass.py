@@ -14,6 +14,7 @@ __status__ = "Development"
 import rospy
 import requests # URL requests
 import datetime # Gets actual date
+import pytz
 import copy
 import rospkg
 
@@ -44,9 +45,6 @@ class Weather():
     Weather class.
     """
 
-    # Constants
-    _GOAL_MAX_SIZE = 5 # Max size of the weather goal
-
     # Params constants
     _LOCAL_COUNTRY_PARAM = 'context/robot/country' # Country code (ISO 3166, 2)
     _LANGUAGE_PARAM = 'context/user/language'
@@ -57,9 +55,7 @@ class Weather():
     _COUNTRY_CODES_FILENAME = 'wikipedia-iso-country-codes.csv' # Name of the file to store the country codes data
 
     # Lists
-    _SOURCE_LIST = ['apixu', 'openweathermap', 'source1', 'source2'] # List of the sources
-    _SOURCE_LIST = ['openweathermap', 'apixu', 'source1', 'source2'] # List of the sources
-    #_SOURCE_LIST = ['source2'] # List of the sources
+    _SOURCE_LIST = ['apixu', 'openweathermap', 'apixu'] # List of the sources
     _UPDATE_HOURS = [23, 19, 14, 9, 4] # List of hours for current request
     _INFO_BASIC_LIST = {
         'current': ['date', 'temp_c', 'is_day', 'text', 'code', 'city_name', 'country_name', 'last_updated', 'icon', 'source'], # Basic current list
@@ -199,8 +195,6 @@ class Weather():
         except CityNotFound as e: # City not found
             rospy.logwarn('[weatherClass] URL request ERROR: City not found (%s)' % e)
             return 1, {}
-        
-        
 
     def _json_searcher(self, list_json, name):
         """
@@ -297,99 +291,46 @@ class Weather():
 
         ################### Make local request ###################
         print("##--## Making local request: " + city_name + ", " + country_code + ' ##--##')
+        # Local request
         local_result, local_result_info_dic = self._local_request(city_name, country_code)
 
-        # ############### Local request success ################ #
-        #if(local_result == 0):
-        if(False):
+        ####### Request result management #######
+        # -- Request success -- #
+        if(local_result == 0):
             try:
-                # ######### Check if local data is updated ######### #
-                # Manage last_update variable datatime
-                last_update = DatetimeManager(local_result_info_dic[forecast_type]['last_updated'])
-                print('Last update (' + forecast_type + '): ' + last_update.date())
-                # Manage current datatime
-                now = datetime.datetime.now() # Get current date
-                print('Local date: ' + str(now.year) + '-' + str(now.month) + '-' + str(now.day))
-                updated = False
-                if(now.year == int(last_update.year()) and now.month == int(last_update.month()) and now.day == int(last_update.day())): # Date updated
-                    print('Date is updated')
-                    if(forecast_type == 'forecast'):
-                        pass
+                # ####### Check if local data is updated ####### #
+                # Manage datatimes
+                now_utc = datetime.datetime.now(tz = pytz.utc) # Actual datetime in UTC (+00:00)
+                last_updated = datetime.datetime.fromtimestamp(local_result_info_dic[forecast_type]['last_updated'], tz=pytz.utc) # Last updated in UTC (+00:00)
+                rospy.logdebug('Current datetime: %s' % now_utc)
+                rospy.logdebug('Last updated (%s): %s' % (forecast_type, last_updated))
 
-                    if(forecast_type == 'current'):
-                        pass
-                else: # Date NOT updated
-                    rospy.logwarn("Weather request ERROR: Local file not updated")
-                if(updated):
-                    return local_result, local_result_info_dic
-                
-            except KeyError:
-                rospy.logwarn("Weather request ERROR: Key Error")
+                # Language check #
+                if(local_result_info_dic['lang'].lower() != lang.lower()):
+                    raise GeneralError('Language not updated')
+                # Timedate check #
+                if(forecast_type == 'current'):
+                    # Get datetime without min, sec and microsec
+                    now_utc = now_utc.replace(minute=0, second=0, microsecond=0) # (hh:00:00)
+                    # Update each hour
+                    if((now_utc-last_updated).total_seconds()>0):
+                        raise GeneralError('Datetime not updated')
+                if(forecast_type == 'forecast'):
+                    # Get datetime without hour, min, sec and microsec
+                    now_utc = now_utc.replace(hour=0, minute=0, second=0, microsecond=0) # (00:00:00)
+                    # Update each day
+                    if((now_utc-last_updated).total_seconds()>0):
+                        raise GeneralError('Datetime not updated')
 
-        '''
-        if True:
-            read local
-            check if it is updated
-            if(forecast_type == 'forecast'):
-                check if forecast is updated
-            elif(forecast_type == 'current'):
-                check if current is updated
-        
-            if(updated == True):
-                return 0, result_info_dic
-            else:
-                print(forecast_type + ' not updated')
-        # else:
-            print('Info not found in local')
+                # Cache already updated #
+                rospy.logdebug('Cache is already updated. Getting local info')
+                return local_result, local_result_info_dic
 
-        '''
-
-        '''
-        make_req = False # Indicate to fill the data
-        if (data_json != -1 and data_json_check != -1): # JSON files exists
-            # Check all parameters exist
-            #try:
-            # Check if 'city' and 'lang' coincide
-            if(location.lower() == data_json_check['city'].lower() and lang.lower() == data_json_check['lang'].lower()): # 'city' and 'lang' coincide
-                now = datetime.datetime.now() # Get current date
-                # Check if date is updated
-                if(data_json_check['day'] == str(now.day) and data_json_check['month'] == str(now.month) and data_json_check['year'] == str(now.year)): # Already updated
-                    print('Info in local found: "' + data_json_check['city'].lower() + '", "' + data_json_check['lang'].lower() + '"')
-                    # Current is selected
-                    if (forecast == 'current'):
-                        print('Checking if current weather is updated...')
-                        hour = -1 # Hour used to update
-                        for update_hour in self.update_hours: # Search the hour in the list
-                            hour = update_hour
-                            if(update_hour < now.hour): # When find the hour it stops
-                                break
-                        # Check if current weather is updated
-                        if(data_json_check['hour'] == str(hour)): # Already updated
-                            print('Current weather already updated')
-                            make_req = True
-                        else:
-                            print('Current weather NOT updated')
-                    else:
-                        print('hola')
-                        make_req = True
-                else:
-                    rospy.logwarn("Local request ERROR: File not updated")
-            else:
-                rospy.logwarn("Local request ERROR: 'city' or 'lang' do not coincide")
-            #except:
-            #   rospy.logwarn("Local request ERROR: Parameters not existing")
-        else:
-            rospy.logwarn("Local request ERROR: JSON files do not exist")
-
-        if(make_req):
-            self.__data = data_json # Get JSON data
-            print('Local request succeded')
-            return True
-        else:
-            print('Local request not available')
-            return False
-        '''
-
+            except KeyError as e:
+                rospy.logwarn('[weatherClass] Weather request ERROR: Key Error (%s)' % e)
+            except GeneralError as e:
+                rospy.logwarn('[weatherClass] Cache must be updated (%s)' % e)
+        #########################################
         ##########################################################
 
 
@@ -441,7 +382,7 @@ class Weather():
                             params.update({key: location_new})
                         elif(params[key][2:] == 'lang'):
                             params.update({key: lang})
-
+                # URL request
                 url_result, url_result_info_dic = self._url_request(source, url, params)
                 rospy.logdebug('[weatherClass] url_result_info_dic: ' + str(url_result_info_dic))
                 ################################################
@@ -594,37 +535,6 @@ class Weather():
         ###################################################################
 
         return 0, result_info_dic
-
-    def manage_weather(self, goal_vec):
-        """
-        Manager of the weather class. It updates the result and result_info.
-        Examples:
-        madrid/forecast_type/tomorrow/basic/101
-        sydney/current/0/is_day/011
-
-        @param goal_vec: Vector of the goal.
-
-        @return result: Final result.
-        @return result_info_dic: Weather dictionary result.
-        """
-
-        if(len(goal_vec) >= self._GOAL_MAX_SIZE-1): # Check if all min fields are completed
-
-            ############## Check weather ################
-            location = goal_vec[0] # City name
-            forecast_type = goal_vec[1] # Forecast or current info
-            date = goal_vec[2] # Date
-            info_required = goal_vec[3] # Info wanted
-
-            result, result_info_dic = self._get_info(location, forecast_type, date, info_required)
-            
-            return result, result_info_dic
-
-        else:
-            print("Goal size not completed")
-            self._result.result = -1 # Fail
-            self._result_info_dic = {}
-            return -1, {}
 
 
 if __name__ == '__main__':

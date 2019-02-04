@@ -11,62 +11,34 @@ __maintainer__ = "Sergio Gonzalez Diaz"
 __email__ = "sergigon@ing.uc3m.es"
 __status__ = "Development"
 
-from skill.skill import Skill, ActionlibException, NATURAL
-from time_weather_skill.weatherClass import Weather # Weather class
-from time_weather_skill.general_functions import makeCA_info, makeCA_gesture_info # Voice communication CA functions
-from time_weather_skill.sys_operations import SysOperations
+from time_weather_skill.general_functions import makeCA_info, makeCA_gesture_info # CA functions
 from time_weather_skill.datetime_manager import DatetimeManager
 from time_weather_skill.general_functions import *
-from time_weather_skill.csv_reader import *
 
-import rospkg
 import rospy
-import roslib
-import importlib
-import actionlib
-#import pdb; pdb.set_trace()
 
 # Messages
 from std_msgs.msg import String, Empty
 from interaction_msgs.msg import CA
-import time_weather_skill.msg
 from common_msgs.msg import KeyValuePair
 
-# Skill variables
-# Package name
-pkg_name = 'time_weather_skill'
-# Skill name (declare this only if the name is different of 'pkg_name')
-skill_name = "time_weather_skill"
-
-class TimeWeatherSkill(Skill):
+class DisplayManager():
     """
-    TimeWeather skill class.
+    Display Manager class.
     """
-
-    # Feedback and result of this skill
-    _feedback = time_weather_skill.msg.TimeWeatherFeedback()
-    _result = time_weather_skill.msg.TimeWeatherResult()
 
     # Constants
-    _GOAL_MAX_SIZE = 5 # Max size of the goal
     _ICON_OBTENTION = 1 # Determines the obetention of icons (0: Internet, 1: Local)
 
     # Filenames
     _CONDITIONS_FILENAME_STR = 'conditions_codes_' # Part name of the file to read the conditions info
 
-    def __init__(self):
+    def __init__(self, datapath):
         """
         Init method.
         """
 
-        # class variables
-        self._as = None # SimpleActionServer variable
-        self._goal = "" # Goal a recibir
-
         # Paths
-        rospack = rospkg.RosPack()
-        self._pkg_path = rospack.get_path(pkg_name) + '/' # Package path
-        self._data_path = self._pkg_path + 'data/' # Data path
         self._icons_path = self._data_path + 'weather_icons/' # Icons path
         self._conditions_path = self._data_path + 'conditions/' # Conditions path
 
@@ -74,49 +46,10 @@ class TimeWeatherSkill(Skill):
         self.weather_icon_set = 'material_design'
         self.weather_icon_size = '640x640'
 
-        # init the skill
-        Skill.__init__(self, skill_name, NATURAL)
-
-
-    def create_msg_srv(self):
-        """
-        This function has to be implemented in the children.
-
-        @raise rospy.ROSException: if the service is inactive.
-        """
-        print("create_msg_srv() called")
-
-        # publishers and subscribers
-        self.ca_pub = rospy.Publisher("hri_manager/ca_activations", CA, queue_size=10) # CA publisher
-        self.ca_deactivation_pub = rospy.Publisher("hri_manager/ca_deactivations", String, queue_size=10) # CA deactivation publisher
-
-        #self.sub_response = rospy.Subscriber(robot + "hri_manager/response", CA, self.response_callback) # CA subscriber
-
-        # servers and clients
-        # Si el servidor actionlib no se ha inicializado:
-
-        if not self._as:
-            self._as = actionlib.SimpleActionServer(skill_name, time_weather_skill.msg.TimeWeatherAction, execute_cb=self.execute_cb, auto_start=False)
-            # start the action server
-            self._as.start()
-
-    def shutdown_msg_srv(self):
-        """
-        This function has to be implemented in the children.
-        """
-
-        # publishers and subscribers
-        # FIXME: do not unregister publishers because a bug in ROS
-        # self.__test_pub.unregister()
-
-        # servers and clients
-            
-        print("shutdown_msg_srv() called")
-
     def _manage_display(self, forecast_type, date_i, display, weather_dic):
         """
         Manager of the display.
-    
+
         @param display: String of the display goal.
         @param weather_dic: Input weather dicionary.
         """
@@ -249,7 +182,7 @@ class TimeWeatherSkill(Skill):
                     date_speech = 'Mañana'
                 else:
                     date_speech = 'El día ' + str(day)
-            	weather_speech = date_speech + ' va a haber ' + str(avgtemp_c) + ' grados con ' + str(text) + ' en ' + str(city_name)
+            	weather_speech = date_speech + ' va a haber ' + str(temp_c) + ' grados con ' + str(text) + ' en ' + str(city_name)
 
             print('Etts output:')
             print(' -> ' + weather_speech + ' <-')
@@ -258,124 +191,3 @@ class TimeWeatherSkill(Skill):
             self.ca_pub.publish(ca_info)
             rospy.sleep(1)
         #############################################
-
-    def execute_cb(self, goal):
-        """
-        Callback of the node. Activated when a goal is received
-
-        @param goal: time_weather_skill goal.
-        """
-
-        # default values (In progress)
-        self._result.result = -1 # Error
-        self._result.result_info = [] # Empty
-        result_info_dic = {} # Dictionary to fill result_info
-        self._feedback.feedback = 0
-
-        ############### Si la skill esta activa: ###################
-        if self._status == self.RUNNING:
-            print ("RUNNING...")
-
-            try:
-                ############# State Preempted checking #############
-                # Si el goal esta en estado Preempted (es decir,   #
-                # hay un goal en cola o se cancela el goal         #
-                # actual), activo la excepcion                     #
-                ####################################################
-                if self._as.is_preempt_requested():
-                    print("Preempt requested")
-                    raise ActionlibException
-                #==================================================#
-                
-                ################ Processes the goal ################
-                goal_vec = goal.command.split("/") # Divides goal by fields
-                if(len(goal_vec) >= self._GOAL_MAX_SIZE-1): # Check if all fields (except display) are completed
-                    ################### Weather ####################
-                    location = goal_vec[0] # City name
-                    forecast_type = goal_vec[1] # Forecast or current info
-                    date = goal_vec[2] # Date
-                    info_required = goal_vec[3] # Info wanted
-                    # Get weather info
-                    self._result.result, result_info_dic = Weather(self._data_path)._get_info(location, forecast_type, date, info_required)
-                    if(self._result.result != 0): # Fail
-                        rospy.logerr('[%s] Weather ERROR ' % pkg_name)
-                    else:
-                        if(len(goal_vec) >= self._GOAL_MAX_SIZE): # Check if all fields are completed
-                            ################ Display ################
-                            display = goal_vec[4] # Display info
-                            self._manage_display(forecast_type, date, display, result_info_dic)
-                        else:
-                            rospy.logwarn('[%s] Display not specified ' % pkg_name)
-
-                else:
-                    rospy.logerr('[%s] Goal size not completed ' % pkg_name)
-                    self._result.result = -1 # Fail
-                    result_info_dic = {}
-
-                #==================================================#
-            
-            ######### Si se ha hecho un preempted o cancel: ########
-            except ActionlibException:
-                rospy.logwarn('[%s] Preempted or cancelled' % pkg_name)                 
-                # FAIL
-                self._result.result = 1 # Preempted
-            #======================================================#
-            
-        #==========================================================#
-        ############# Si la skill no esta activa: ##################
-        else:
-            print("STOPPED")
-            rospy.logwarn("[%s] Cannot send a goal when the skill is stopped" % pkg_name)
-            # ERROR
-            self._result.result = -1 # Fail
-        #==========================================================#
-        
-        # Envio el feedback al final del loop
-        self._as.publish_feedback(self._feedback)
-        
-        #### Envio del resultado y actualizacion del status del goal ###
-        # Use the result_info dictionary for filling the result_info variable
-        kvp_list = [] # Auxiliar list for the KeyValuePair values
-        for key in result_info_dic:
-            kvp = KeyValuePair()
-            kvp.key = str(key)
-            kvp.value = str(result_info_dic[key])
-            kvp_list.append(kvp)
-
-        # Empty the result_info
-        size = len(self._result.result_info)
-        for x in range(0, size):
-            self._result.result_info.pop()
-        # Fill the result_info with the dictionary
-        self._result.result_info = kvp_list
-        
-        # Send result
-        if self._result.result == 0:
-            rospy.logdebug("setting goal to succeeded")
-            self._as.set_succeeded(self._result)
-        else:
-            rospy.logdebug("setting goal to preempted")
-            self._as.set_preempted(self._result)
-
-        print("###################")
-        print("### Result sent ###")
-        print("###################")
-        #==============================================================#
-
-
-        # Inicializacion variables
-
-
-
-if __name__ == '__main__':
-    try:
-        # start the node
-        rospy.init_node(skill_name, log_level=rospy.DEBUG)
-        rospy.loginfo('[' + pkg_name + ': ' + skill_name + ']')
-
-        # create and spin the node
-        node = TimeWeatherSkill()
-        rospy.sleep(1)
-        rospy.spin()
-    except rospy.ROSInterruptException:
-        pass
