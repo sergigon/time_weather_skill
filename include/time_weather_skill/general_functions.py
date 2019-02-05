@@ -41,7 +41,8 @@ def location_divider(location):
     if(n_commas <= 0): # NOT specified country
         city_name = location
     else: # Specified country
-        city_name, country_name = location.split(",")
+        name_vec = location.split(",")
+        city_name, country_name = name_vec[0], name_vec[1]
         if(country_name[0] == ' '): # Removes space character if necessary
             country_name = country_name[1:]
 

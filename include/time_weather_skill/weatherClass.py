@@ -169,14 +169,14 @@ class Weather():
         except NoParam as e: # Param Not Provided
             rospy.logwarn('[weatherClass] URL request ERROR: Param not provided (%s)' % e)
             return -1, {}
-        except InvalidURL as e:
+        except InvalidURL as e: # Invalid URL
             rospy.logwarn('[weatherClass] URL request ERROR: Invalid URL (%s)' % e)
             return -1, {}
         except InvalidKey as e: # Invalid Key
             rospy.logwarn('[weatherClass] URL request ERROR: Invalid Key (%s)' % e)
             return -1, {}
         except requests.exceptions.MissingSchema as e: # Invalid URL
-            rospy.logerr("MissingSchema; %s" % e)
+            rospy.logerr("[weatherClass] URL request ERROR: Missing Schema (%s)" % e)
             return -1, {}
         except GeneralError as e: # General Error
             rospy.logwarn('[weatherClass] URL request ERROR: General ERROR (%s)' % e)
@@ -315,12 +315,16 @@ class Weather():
                     # Update each hour
                     if((now_utc-last_updated).total_seconds()>0):
                         raise GeneralError('Datetime not updated')
-                if(forecast_type == 'forecast'):
+                elif(forecast_type == 'forecast'):
                     # Get datetime without hour, min, sec and microsec
                     now_utc = now_utc.replace(hour=0, minute=0, second=0, microsecond=0) # (00:00:00)
                     # Update each day
                     if((now_utc-last_updated).total_seconds()>0):
                         raise GeneralError('Datetime not updated')
+                # Forecast limit check
+                if(forecast_type == 'forecast'):
+                    if(date >= local_result_info_dic['forecast']['forecast_days']):
+                        raise GeneralError('Forecast day (%s) not in cache (forecast days: %s)' %(date, local_result_info_dic['forecast']['forecast_days']))
 
                 # Cache already updated #
                 rospy.logdebug('Cache is already updated. Getting local info')
