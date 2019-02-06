@@ -123,6 +123,9 @@ class TimeWeatherSkill(Skill):
             
         print("shutdown_msg_srv() called")
 
+    def pause_exec(self):
+        print('pausado')
+
     def _manage_display(self, forecast_type, date_i, display, standard_weather_dic):
         """
         Manager of the display.
@@ -271,7 +274,7 @@ class TimeWeatherSkill(Skill):
             print('>> Voice selected')
 
             if(forecast_type == 'current'):
-                weather_speech = 'En ' + str(city_name) + ' hay ' + str(int_temp_c) + ' coma ' + str(dec_temp_c) + ' grados'
+                weather_speech = 'En ' + str(city_name) + ' hay ' + str(int_temp_c) + ' grados'
             if(forecast_type == 'forecast'):
                 date_speech = ''
                 if(date_i == 0):
@@ -280,9 +283,7 @@ class TimeWeatherSkill(Skill):
                     date_speech = 'Mañana'
                 else:
                     date_speech = 'El día ' + str(day)
-                weather_speech = (str(date_speech) + ' van a haber temperaturas máximas de ' + str(int_maxtemp_c) + ' coma '
-                    + str(dec_maxtemp_c) + ' grados y mínimas de ' + str(int_mintemp_c) + ' coma '
-                    + str(dec_mintemp_c) + ' en ' + str(city_name))
+                weather_speech = (str(date_speech) + ' van a haber temperaturas máximas de ' + str(int_maxtemp_c) + ' grados y mínimas de ' + str(int_mintemp_c) + ' en ' + str(city_name))
 
             print('Etts output:')
             print(' -> ' + weather_speech + ' <-')
@@ -313,6 +314,8 @@ class TimeWeatherSkill(Skill):
                 date = date_text2num(date) # Date
             except ValueError as e:
                 raise GoalError('%s is not a number' % date)
+            if(date<0):
+                raise GoalError('%s lower than 0' % date)
             # Check display
             display_vec = list(display) # Divides goal by fields
             if(len(display_vec)!=3):
@@ -388,10 +391,17 @@ class TimeWeatherSkill(Skill):
             #======================================================#
             
         #==========================================================#
-        ############# Si la skill no esta activa: ##################
-        else:
+        ################ Si la skill no esta activa: ###############
+        if self._status == self.STOPPED:
             print("STOPPED")
             rospy.logwarn("[%s] Cannot send a goal when the skill is stopped" % pkg_name)
+            # ERROR
+            self._result.result = -1 # Fail
+        #==========================================================#
+        ################# Si la skill esta pausada: ################
+        if self._status == self.PAUSED:
+            print("STOPPED")
+            rospy.logwarn("[%s] Cannot send a goal while the skill is paused" % pkg_name)
             # ERROR
             self._result.result = -1 # Fail
         #==========================================================#

@@ -230,7 +230,11 @@ class Weather():
         # Initialize variables
         result, result_info_dic = -1, {}
         found = False
-        local_country_code = rospy.get_param(self._LOCAL_COUNTRY_PARAM) # Get local country name
+        try:
+            local_country_code = rospy.get_param(self._LOCAL_COUNTRY_PARAM) # Get local country name
+        except:
+            local_country_code = 'es'
+            rospy.logerr("Local country parameter not found. Using '%s'" % local_country_code)
 
         # Json files list in the data folder
         list_json = self._file_manager.ls_json(self._cache_path)
@@ -279,8 +283,17 @@ class Weather():
         """
 
         # Initialize variables
-        lang = rospy.get_param(self._LANGUAGE_PARAM)
-        local_country_code = rospy.get_param(self._LOCAL_COUNTRY_PARAM) # Get local country name
+        try:
+            lang = rospy.get_param(self._LANGUAGE_PARAM)
+        except:
+            lang = 'es'
+            rospy.logerr("Language parameter not found. Using '%s'" % lang)
+        try:
+            local_country_code = rospy.get_param(self._LOCAL_COUNTRY_PARAM) # Get local country name
+        except:
+            local_country_code = 'es'
+            rospy.logerr("Local country parameter not found. Using '%s'" % local_country_code)
+
         city_name, country_code = location_divider(location) # Divide the location into city and country names
         # Transforms the country name into country code
         country_codes_filepath = self._params_path + self._COUNTRY_CODES_FILENAME
